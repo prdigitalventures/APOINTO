@@ -42,3 +42,35 @@ Open [http://localhost:3000](http://localhost:3000)
 | Customer | 9876543211 | demo123 |
 
 Demo business: `/ravihairstudio`
+
+## Deploy on Railway
+
+This app is configured to deploy with Docker on Railway.
+
+1. Install the CLI and log in:
+
+```bash
+bash <(curl -fsSL railway.com/install.sh)
+railway login
+```
+
+2. Create a project, set secrets, add a persistent volume for SQLite, and deploy:
+
+```bash
+railway init --name apointo
+railway variable set JWT_SECRET="$(openssl rand -hex 32)"
+railway variable set DATABASE_URL="file:/data/prod.db"
+railway volume add --mount /data
+railway up
+railway domain
+```
+
+The container runs Prisma migrations and seeds demo data on start.
+
+Demo logins after deploy:
+
+| Role | Phone | Password |
+|------|-------|----------|
+| Owner | 9876543210 | demo123 |
+| Customer | 9876543211 | demo123 |
+
