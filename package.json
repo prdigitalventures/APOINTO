@@ -1,0 +1,13 @@
+{
+  "name": "apointo",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Universal AI-Powered Booking Platform for Indian SMBs",
+  "packageManager": "pnpm@9.15.4",
+  "scripts": {
+    "dev": "pnpm -r --parallel run dev",
+    "build": "pnpm -r run build",
+    "test": "pnpm -r run test",
+    "db:prepare": "pnpm --filter @apointo/server db:prepare"
+  }
+}
