@@ -44,6 +44,20 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000)
 
+## Live demo
+
+Public URL (Vercel): **https://temporary-quick-violet-7kqppxt.vercel.app**
+
+Anonymous Vercel deployments expire about **1 hour** after create unless you claim them. Claim the deployment (keeps the URL on your Vercel account):
+
+https://vercel.com/claim-deployment?code=74a6d437-fbf8-44a5-990b-964fa83b56cb
+
+The Postgres database is a Neon claimable instance (expires ~72 hours unless claimed):
+
+https://neon.new/claim/01a01fff-e9cf-75b9-8b00-6e226c77f30a
+
+After claiming Vercel, set these project env vars to the Neon connection strings from the Neon console (`DATABASE_URL` pooled + `pgbouncer=true`, `DIRECT_URL` direct, plus `JWT_SECRET`).
+
 ## Demo Accounts
 
 | Role | Phone | Password |
