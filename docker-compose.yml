@@ -1,0 +1,14 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: apointo
+      POSTGRES_PASSWORD: apointo
+      POSTGRES_DB: apointo
+    ports:
+      - "5432:5432"
+    volumes:
+      - apointo-pg:/var/lib/postgresql/data
+
+volumes:
+  apointo-pg:

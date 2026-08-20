@@ -19,15 +19,25 @@
 ## Tech Stack
 
 - **Next.js 14** (App Router) + TypeScript
-- **Prisma** + SQLite
+- **Prisma 5** + PostgreSQL (Neon / any Postgres)
 - **Tailwind CSS** — Mobile-first design
 - **JWT Auth** — Role-based (Owner / Customer)
 
 ## Getting Started
 
+Postgres is required (SQLite is not used in production because serverless hosts like Vercel have ephemeral disks).
+
 ```bash
+# Option A: local Postgres
+docker compose up -d
+# then set DATABASE_URL and DIRECT_URL to postgresql://apointo:apointo@localhost:5432/apointo
+
+# Option B: hosted Postgres (Neon, Railway, etc.)
+cp .env.example .env
+# edit DATABASE_URL and DIRECT_URL
+
 npm install
-npx prisma migrate dev
+npx prisma migrate deploy
 npm run seed
 npm run dev
 ```
@@ -43,34 +53,17 @@ Open [http://localhost:3000](http://localhost:3000)
 
 Demo business: `/ravihairstudio`
 
-## Deploy on Railway
+## Deploy
 
-This app is configured to deploy with Docker on Railway.
+The app is configured for **Vercel** (`vercel.json`) and **Railway** (`Dockerfile` + `railway.json`).
 
-1. Install the CLI and log in:
+Required environment variables:
 
-```bash
-bash <(curl -fsSL railway.com/install.sh)
-railway login
-```
+- `DATABASE_URL` — pooled Postgres URL (add `pgbouncer=true` when using Neon’s pooler)
+- `DIRECT_URL` — direct (non-pooled) Postgres URL for migrations
+- `JWT_SECRET` — long random string
+- `OPENAI_API_KEY` — optional; onboarding falls back to a local NLU parser without it
 
-2. Create a project, set secrets, add a persistent volume for SQLite, and deploy:
+Build runs `prisma migrate deploy` and seeds demo accounts.
 
-```bash
-railway init --name apointo
-railway variable set JWT_SECRET="$(openssl rand -hex 32)"
-railway variable set DATABASE_URL="file:/data/prod.db"
-railway volume add --mount /data
-railway up
-railway domain
-```
-
-The container runs Prisma migrations and seeds demo data on start.
-
-Demo logins after deploy:
-
-| Role | Phone | Password |
-|------|-------|----------|
-| Owner | 9876543210 | demo123 |
-| Customer | 9876543211 | demo123 |
-
+SQLite is **not** used on Vercel: each serverless instance has its own ephemeral filesystem, so bookings would not persist. Use Postgres instead.

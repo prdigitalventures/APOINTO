@@ -7,8 +7,10 @@ COPY package.json package-lock.json ./
 RUN npm ci
 
 COPY . .
-ENV DATABASE_URL="file:./build.db"
 ENV NEXT_TELEMETRY_DISABLED=1
+# Prisma generate needs a valid URL shape; real credentials are supplied at runtime.
+ENV DATABASE_URL="postgresql://postgres:postgres@localhost:5432/apointo?schema=public"
+ENV DIRECT_URL="postgresql://postgres:postgres@localhost:5432/apointo?schema=public"
 RUN npx prisma generate
 RUN npm run build
 
@@ -20,7 +22,6 @@ ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV HOSTNAME=0.0.0.0
 ENV PORT=3000
-ENV DATABASE_URL="file:/data/prod.db"
 
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/prisma ./prisma
@@ -29,8 +30,6 @@ COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 
-RUN mkdir -p /data
-
 EXPOSE 3000
 
-CMD ["sh", "-c", "mkdir -p /data && npx prisma migrate deploy && npx tsx prisma/seed.ts && node server.js"]
+CMD ["sh", "-c", "npx prisma migrate deploy && npx tsx prisma/seed.ts && node server.js"]
