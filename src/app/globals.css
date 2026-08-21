@@ -27,3 +27,19 @@ body {
     padding-bottom: env(safe-area-inset-bottom);
   }
 }
+
+@keyframes apointo-alert-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.25;
+    transform: scale(1.45);
+  }
+}
+
+.apointo-alert-dot {
+  animation: apointo-alert-pulse 1.1s ease-in-out infinite;
+}
