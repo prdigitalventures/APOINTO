@@ -75,7 +75,7 @@ export function AIChat({ onComplete }: AIChatProps) {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
-          placeholder='Try "Create my booking system"'
+          placeholder='Try “Create booking system for my Green Trends salon”'
           disabled={loading}
         />
         <Button onClick={sendMessage} disabled={loading || !input.trim()} className="flex-shrink-0">
