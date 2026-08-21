@@ -42,17 +42,31 @@ function CalendarContent() {
   }, [user, loading, router]);
 
   useEffect(() => {
-    if (businessId) {
-      fetch(`/api/bookings?businessId=${businessId}&role=owner`)
-        .then((r) => r.json())
-        .then((d) => setBookings(d.bookings || []));
-      fetch('/api/businesses')
-        .then((r) => r.json())
-        .then((d) => {
-          const biz = d.businesses?.find((b: { id: string }) => b.id === businessId);
-          if (biz) setBusiness(biz);
-        });
-    }
+    if (!user) return;
+
+    fetch('/api/businesses')
+      .then((r) => r.json())
+      .then((d) => {
+        const businesses = (d.businesses || []) as Array<{ id: string; name: string; slug: string }>;
+        const biz = businessId
+          ? businesses.find((item) => item.id === businessId)
+          : businesses[0];
+
+        if (biz) {
+          setBusiness(biz);
+          if (!businessId) {
+            router.replace(`/owner/calendar?business=${biz.id}`);
+          }
+        }
+      });
+  }, [businessId, router, user]);
+
+  useEffect(() => {
+    if (!businessId) return;
+
+    fetch(`/api/bookings?businessId=${businessId}&role=owner`)
+      .then((r) => r.json())
+      .then((d) => setBookings(d.bookings || []));
   }, [businessId]);
 
   const dayBookings = bookings.filter((b) => {
@@ -79,7 +93,7 @@ function CalendarContent() {
   if (loading || !user) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
 
   return (
-    <div className="min-h-screen pb-20">
+    <div className="min-h-screen pb-24">
       <header className="bg-white border-b px-4 py-3 flex items-center gap-3">
         <Link href="/owner"><ArrowLeft size={20} /></Link>
         <div className="flex-1">

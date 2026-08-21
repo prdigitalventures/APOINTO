@@ -9,7 +9,7 @@ import { StatusChip } from '@/components/ui/StatusChip';
 import { CustomerAssistantBar } from '@/components/CustomerAssistantBar';
 import { formatTime12h, CATEGORIES } from '@/lib/utils';
 import { format, isToday, isTomorrow } from 'date-fns';
-import { Calendar, LogOut, MapPin, Navigation } from 'lucide-react';
+import { LogOut, MapPin, Navigation } from 'lucide-react';
 
 interface Booking {
   id: string;
@@ -141,7 +141,7 @@ export default function CustomerHome() {
   if (loading || !user) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
 
   return (
-    <div className="min-h-screen pb-20">
+    <div className="min-h-screen pb-24">
       <header className="bg-white px-4 py-6 space-y-4">
         <div className="flex items-center justify-between">
           <div>
@@ -319,18 +319,6 @@ export default function CustomerHome() {
         </section>
       </main>
 
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t safe-bottom">
-        <div className="max-w-lg mx-auto flex justify-around py-2">
-          <Link href="/customer" className="flex flex-col items-center p-2 text-indigo-600">
-            <Calendar size={20} />
-            <span className="text-xs mt-1">Home</span>
-          </Link>
-          <Link href="/customer/bookings" className="flex flex-col items-center p-2 text-gray-500">
-            <Calendar size={20} />
-            <span className="text-xs mt-1">Bookings</span>
-          </Link>
-        </div>
-      </nav>
     </div>
   );
 }

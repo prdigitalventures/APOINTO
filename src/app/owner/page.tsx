@@ -7,7 +7,7 @@ import { useAuth } from '@/components/AuthProvider';
 import { AIChat } from '@/components/AIChat';
 import { ShareLink } from '@/components/ShareLink';
 import { Button } from '@/components/ui/Button';
-import { Calendar, Bell, LogOut, ChevronRight } from 'lucide-react';
+import { Bell, LogOut, ChevronRight } from 'lucide-react';
 
 interface Business {
   id: string;
@@ -76,7 +76,7 @@ export default function OwnerDashboard() {
   }
 
   return (
-    <div className="min-h-screen pb-20">
+    <div className="min-h-screen pb-24">
       <header className="bg-white border-b px-4 py-4 flex items-center justify-between">
         <div>
           <p className="text-sm text-gray-500">Welcome back</p>
@@ -135,20 +135,6 @@ export default function OwnerDashboard() {
         )}
       </main>
 
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t safe-bottom">
-        <div className="max-w-lg mx-auto flex justify-around py-2">
-          <Link href="/owner" className="flex flex-col items-center p-2 text-indigo-600">
-            <Calendar size={20} />
-            <span className="text-xs mt-1">Home</span>
-          </Link>
-          {businesses[0] && (
-            <Link href={`/owner/calendar?business=${businesses[0].id}`} className="flex flex-col items-center p-2 text-gray-500">
-              <Calendar size={20} />
-              <span className="text-xs mt-1">Calendar</span>
-            </Link>
-          )}
-        </div>
-      </nav>
     </div>
   );
 }

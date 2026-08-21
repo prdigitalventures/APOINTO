@@ -44,7 +44,7 @@ export default function CustomerBookingsPage() {
   if (loading || !user) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen pb-24">
       <header className="bg-white border-b px-4 py-3 flex items-center gap-3">
         <Link href="/customer"><ArrowLeft size={20} /></Link>
         <h1 className="font-semibold">My Bookings</h1>
