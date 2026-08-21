@@ -32,13 +32,19 @@ async function main() {
 
   const business = await prisma.business.upsert({
     where: { slug: 'ravihairstudio' },
-    update: {},
+    update: {
+      location: 'Koramangala, Bangalore',
+      latitude: 12.9352,
+      longitude: 77.6245,
+    },
     create: {
       ownerId: owner.id,
       name: 'Ravi Hair Studio',
       slug: 'ravihairstudio',
       category: 'beauty',
       location: 'Koramangala, Bangalore',
+      latitude: 12.9352,
+      longitude: 77.6245,
       about: 'Premium hair styling and grooming services',
       description: 'Hair salon specializing in cuts, styling, and spa treatments',
       bookingSchema: JSON.stringify({

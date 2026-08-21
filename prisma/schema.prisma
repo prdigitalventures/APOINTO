@@ -33,6 +33,8 @@ model Business {
   category           String
   description        String?
   location           String?
+  latitude           Float?
+  longitude          Float?
   timezone           String   @default("Asia/Kolkata")
   logo               String?
   about              String?
