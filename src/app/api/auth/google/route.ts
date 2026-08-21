@@ -69,5 +69,6 @@ export async function GET(req: NextRequest) {
   url.searchParams.set('scope', 'openid email profile');
   url.searchParams.set('state', state);
   url.searchParams.set('prompt', 'select_account');
+  console.info('[Google OAuth] start', { redirectUri, clientIdPrefix: clientId.slice(0, 20) });
   return NextResponse.redirect(url);
 }
