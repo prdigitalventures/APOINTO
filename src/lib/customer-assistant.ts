@@ -171,7 +171,6 @@ async function dayStatus(businessId: string, date: Date, serviceId: string, staf
 function nextOpenDayMessage(
   checks: Array<{ date: Date; closed: boolean; reason: string; slots: string[] }>
 ) {
-  const fullDays = checks.filter((c) => !c.closed && c.slots.length === 0);
   const closedDays = checks.filter((c) => c.closed);
   const open = checks.find((c) => !c.closed && c.slots.length > 0);
 

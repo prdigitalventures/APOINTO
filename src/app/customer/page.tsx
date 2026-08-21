@@ -90,7 +90,7 @@ export default function CustomerHome() {
     localStorage.setItem('apointo-location', JSON.stringify(next));
   };
 
-  const useCity = (city: string) => {
+  const applyCity = (city: string) => {
     const next = { city, label: city };
     setCityInput(city);
     saveLocation(next);
@@ -166,7 +166,7 @@ export default function CustomerHome() {
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            if (cityInput.trim()) useCity(cityInput.trim());
+            if (cityInput.trim()) applyCity(cityInput.trim());
           }}
           className="flex gap-2"
         >
@@ -183,7 +183,7 @@ export default function CustomerHome() {
             <button
               key={city}
               type="button"
-              onClick={() => useCity(city)}
+              onClick={() => applyCity(city)}
               className={`text-xs rounded-full px-3 py-1 border ${location.city === city ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white'}`}
             >
               {city}
