@@ -1,4 +1,5 @@
 import { inferCategory } from './booking-schema';
+import { interpretOnboardingWithLlm, type LlmOnboardingExtract } from './onboarding-llm';
 import { slugify } from './utils';
 
 export type OnboardingStep =
@@ -34,6 +35,7 @@ export interface OnboardingState {
   bufferMinutes?: number;
   staffSkipped?: boolean;
   hoursSetByUser?: boolean;
+  locationSkipped?: boolean;
   messages: Array<{ role: 'user' | 'assistant'; content: string }>;
 }
 
@@ -79,9 +81,15 @@ export function createInitialState(): OnboardingState {
   };
 }
 
+export async function processOnboardingTurn(state: OnboardingState, userMessage: string) {
+  const llm = await interpretOnboardingWithLlm(state, userMessage);
+  return processOnboardingMessage(state, userMessage, llm);
+}
+
 export function processOnboardingMessage(
   state: OnboardingState,
-  userMessage: string
+  userMessage: string,
+  llmExtract?: LlmOnboardingExtract | null
 ): { state: OnboardingState; response: string } {
   const msg = userMessage.trim();
   let newState: OnboardingState = {
@@ -93,7 +101,16 @@ export function processOnboardingMessage(
     return { state: newState, response: 'Your booking system is already ready.' };
   }
 
-  const extracted = extractEntities(msg, newState);
+  if (isFrustration(msg) || llmExtract?.frustration) {
+    if (newState.step === 'welcome') newState.step = 'collecting';
+    const current = getNextMissingQuestion(newState);
+    return {
+      state: newState,
+      response: `Sorry about that — let's keep going. ${current}`,
+    };
+  }
+
+  const extracted = extractEntities(msg, newState, llmExtract);
   newState = mergeExtracted(newState, extracted);
 
   if (newState.step === 'welcome') {
@@ -138,29 +155,46 @@ export function processOnboardingMessage(
 interface Extracted {
   businessName?: string;
   category?: string;
+  location?: string;
+  description?: string;
   services?: ServiceDraft[];
   staff?: StaffDraft[];
   workingHours?: Record<number, { open: string; close: string }>;
   breaks?: Array<{ start: string; end: string; label?: string }>;
   skipStaff?: boolean;
+  skipLocation?: boolean;
   skipBreaks?: boolean;
   skipHolidays?: boolean;
 }
 
-function extractEntities(text: string, state: OnboardingState): Extracted {
+function extractEntities(
+  text: string,
+  state: OnboardingState,
+  llmExtract?: LlmOnboardingExtract | null
+): Extracted {
   const extracted: Extracted = {};
-  const lower = text.toLowerCase();
+  const waitingForName = !state.businessName;
+  const waitingForCategory = Boolean(state.businessName) && !state.category;
+  const waitingForLocation =
+    Boolean(state.businessName) && Boolean(state.category) && !state.location && !state.locationSkipped;
 
-  const name = extractBusinessName(text);
+  const name = extractBusinessName(text, state, llmExtract);
   if (name) extracted.businessName = name;
 
-  const inferred = inferCategory(`${text} ${state.businessName || ''}`);
-  if (/salon|saloon|beauty|parlour|parlor|spa|barber|hair/i.test(text)) {
-    extracted.category = 'beauty';
-  } else if (inferred && inferred !== 'beauty') {
-    extracted.category = inferred;
-  } else if (/salon|saloon|beauty/.test(lower)) {
-    extracted.category = 'beauty';
+  const category = extractCategory(text, state, llmExtract);
+  if (category) extracted.category = category;
+
+  const location = extractLocation(text, state, waitingForLocation, llmExtract);
+  if (location) extracted.location = location;
+  if (waitingForLocation && (SKIP_WORDS.test(text) || llmExtract?.skipLocation)) {
+    extracted.skipLocation = true;
+  }
+
+  if (llmExtract?.description) extracted.description = llmExtract.description;
+
+  // Don't treat a name/category/location answer as a service or staff list.
+  if (waitingForName || waitingForCategory || waitingForLocation) {
+    return overlayLlm(extracted, llmExtract, state);
   }
 
   const pricedServices = extractPricedServices(text);
@@ -204,15 +238,41 @@ function extractEntities(text: string, state: OnboardingState): Extracted {
     }
   }
 
+  if (llmExtract?.services?.length && !extracted.services?.length) {
+    extracted.services = llmExtract.services;
+  }
+  if (llmExtract?.skipStaff) extracted.skipStaff = true;
+
+  return overlayLlm(extracted, llmExtract, state);
+}
+
+function overlayLlm(
+  extracted: Extracted,
+  llmExtract: LlmOnboardingExtract | null | undefined,
+  state: OnboardingState
+): Extracted {
+  if (!llmExtract) return extracted;
+  if (!extracted.businessName && llmExtract.businessName && !isStartUtterance(llmExtract.businessName)) {
+    extracted.businessName = llmExtract.businessName;
+  }
+  if (!extracted.category && llmExtract.category) {
+    extracted.category = normalizeCategory(llmExtract.category);
+  }
+  if (!extracted.location && llmExtract.location && !state.location) {
+    extracted.location = llmExtract.location.trim();
+  }
+  if (llmExtract.skipLocation) extracted.skipLocation = true;
   return extracted;
 }
 
 function mergeExtracted(state: OnboardingState, extracted: Extracted): OnboardingState {
   const next: OnboardingState = { ...state };
 
-  if (extracted.businessName) next.businessName = titleCase(extracted.businessName);
+  if (extracted.businessName) next.businessName = preserveNameCasing(extracted.businessName);
   if (extracted.category) next.category = extracted.category;
-  if (!next.category && next.businessName) next.category = inferCategory(next.businessName);
+  if (extracted.location) next.location = extracted.location;
+  if (extracted.description) next.description = extracted.description;
+  if (extracted.skipLocation) next.locationSkipped = true;
 
   if (extracted.services?.length) {
     next.services = mergeServices(next.services || [], extracted.services);
@@ -265,20 +325,25 @@ function extractedHasUsefulData(extracted: Extracted): boolean {
   return Boolean(
     extracted.businessName ||
     extracted.category ||
+    extracted.location ||
+    extracted.description ||
     extracted.services?.length ||
     extracted.staff?.length ||
     extracted.workingHours ||
     extracted.breaks?.length ||
-    extracted.skipStaff
+    extracted.skipStaff ||
+    extracted.skipLocation
   );
 }
 
 function isFullyCollected(state: OnboardingState): boolean {
   const hasName = Boolean(state.businessName);
+  const hasCategory = Boolean(state.category);
+  const hasLocation = Boolean(state.location) || Boolean(state.locationSkipped);
   const hasServices = (state.services || []).length > 0;
   const pricesReady = (state.services || []).every((s) => typeof s.price === 'number' && s.price > 0);
   const hasStaff = (state.staff || []).length > 0 || Boolean(state.staffSkipped);
-  return hasName && hasServices && pricesReady && hasStaff && Boolean(state.hoursSetByUser);
+  return hasName && hasCategory && hasLocation && hasServices && pricesReady && hasStaff && Boolean(state.hoursSetByUser);
 }
 
 function getNextMissingQuestion(state: OnboardingState): string {
@@ -286,10 +351,13 @@ function getNextMissingQuestion(state: OnboardingState): string {
     return "Great, let's set up your booking system. What is your business name?";
   }
   if (!state.category) {
-    return `Nice, ${state.businessName}. What type of business is it? (Salon, Clinic, Car Service, Tutoring, Sports Court, etc.)`;
+    return `Nice, ${state.businessName}. What type of business is it? (Salon, Clinic, Legal, Car Service, Tutoring, Sports Court, etc.)`;
+  }
+  if (!state.location && !state.locationSkipped) {
+    return `Got it — ${state.businessName} (${getCategoryLabel(state.category)}). Where are you located? City and area is enough, or say "skip".`;
   }
   if (!state.services?.length) {
-    return `Got it — ${state.businessName} (${getCategoryLabel(state.category)}).\n\nWhat services do you offer? For example: Haircut, Shaving, Hair Spa`;
+    return `Location saved${state.location ? ` (${state.location})` : ''}.\n\nWhat services do you offer? For example: Haircut, Shaving, Hair Spa`;
   }
   const missingPrices = state.services.filter((s) => !s.price);
   if (missingPrices.length) {
@@ -308,7 +376,15 @@ function getNextMissingQuestion(state: OnboardingState): string {
   return `${buildFinalSummary(state)}\n\nShall I create your booking system? Reply Yes to confirm, or tell me what to change.`;
 }
 
-function extractBusinessName(text: string): string | undefined {
+function extractBusinessName(
+  text: string,
+  state: OnboardingState,
+  llmExtract?: LlmOnboardingExtract | null
+): string | undefined {
+  if (llmExtract?.businessName && !isStartUtterance(llmExtract.businessName) && !isFrustration(llmExtract.businessName)) {
+    return cleanBusinessName(llmExtract.businessName);
+  }
+
   const quoted = text.match(/['"]([^'"]{2,80})['"]/);
   if (quoted) return cleanBusinessName(quoted[1]);
 
@@ -320,14 +396,136 @@ function extractBusinessName(text: string): string | undefined {
   const myBiz = text.match(/\bmy\s+([A-Z][A-Za-z0-9&' ]{1,40})\s+(?:salon|saloon|clinic|shop|studio)\b/);
   if (myBiz) return cleanBusinessName(myBiz[1]);
 
+  if (state.businessName) return undefined;
+  if (isStartUtterance(text) || isFrustration(text) || SKIP_WORDS.test(text)) return undefined;
+  if (looksLikeBusinessName(text)) return cleanBusinessName(text);
+
   return undefined;
 }
 
+export function isStartUtterance(text: string): boolean {
+  const t = text.trim();
+  if (!t) return false;
+  if (/^(bow|hi|hello|hey|yo|start|begin|go|ok|okay|yes|yep|yeah)$/i.test(t)) return true;
+  if (/^(let'?s go|get started|let'?s start|let'?s begin)$/i.test(t)) return true;
+  if (/^(create|start|build|make|setup|set up)\b/i.test(t)) {
+    if (/\b(called|named|for my)\b/i.test(t)) return false;
+    return /\b(booking|appointment|system|business)\b/i.test(t) || t.split(/\s+/).length <= 4;
+  }
+  return false;
+}
+
+export function isFrustration(text: string): boolean {
+  const t = text.trim();
+  if (/^(fuck+|shit+|damn+|wtf+|stfu|ffs)$/i.test(t)) return true;
+  return /\b(fuck(?:ing)?|shit|damn|asshole|wtf|this is (broken|useless|dumb|stupid)|why (won'?t|doesn'?t)|hate this|stop asking)\b/i.test(
+    t
+  );
+}
+
+function looksLikeBusinessName(text: string): boolean {
+  const t = text.trim();
+  if (t.length < 1 || t.length > 80) return false;
+  if (/\?$/.test(t)) return false;
+  const words = t.split(/\s+/);
+  if (words.length > 8) return false;
+  if (/^(yes|no|skip|none|ok|okay)$/i.test(t)) return false;
+  return /[\p{L}\p{N}]/u.test(t);
+}
+
+function extractCategory(
+  text: string,
+  state: OnboardingState,
+  llmExtract?: LlmOnboardingExtract | null
+): string | undefined {
+  if (llmExtract?.category) {
+    const fromLlm = normalizeCategory(llmExtract.category);
+    if (fromLlm) return fromLlm;
+  }
+  const inferred = inferCategory(text);
+  if (inferred) return inferred;
+  if (/salon|saloon|beauty|parlour|parlor|spa|barber|hair/i.test(text)) return 'beauty';
+  if (state.category) return undefined;
+  if (!state.businessName) return undefined;
+  if (isStartUtterance(text) || isFrustration(text) || SKIP_WORDS.test(text)) return undefined;
+  if (text.trim().toLowerCase() === state.businessName.trim().toLowerCase()) return undefined;
+  const mapped = normalizeCategory(text);
+  if (mapped) return mapped;
+  const words = text.trim().split(/\s+/);
+  if (words.length >= 1 && words.length <= 6 && text.trim().length <= 40) {
+    return slugify(text) || undefined;
+  }
+  return undefined;
+}
+
+function extractLocation(
+  text: string,
+  state: OnboardingState,
+  waitingForLocation: boolean,
+  llmExtract?: LlmOnboardingExtract | null
+): string | undefined {
+  if (llmExtract?.location) return llmExtract.location.trim();
+  const explicit = text.match(
+    /(?:located in|location is|we(?:'re| are) in|based in)\s+([^.\n]{2,80})/i
+  );
+  if (explicit) return explicit[1].trim();
+  if (!waitingForLocation) return undefined;
+  if (isStartUtterance(text) || isFrustration(text) || SKIP_WORDS.test(text)) return undefined;
+  if (text.trim().length < 2 || text.trim().length > 120) return undefined;
+  return text.trim();
+}
+
+function normalizeCategory(raw: string): string | undefined {
+  const inferred = inferCategory(raw);
+  if (inferred) return inferred;
+  const lower = raw.toLowerCase().replace(/[_-]+/g, ' ').trim();
+  const map: Record<string, string> = {
+    salon: 'beauty',
+    saloon: 'beauty',
+    beauty: 'beauty',
+    spa: 'beauty',
+    barber: 'beauty',
+    clinic: 'health',
+    hospital: 'health',
+    dentist: 'health',
+    health: 'health',
+    garage: 'auto',
+    auto: 'auto',
+    mechanic: 'auto',
+    lawyer: 'legal',
+    legal: 'legal',
+    attorney: 'legal',
+    tutor: 'education',
+    education: 'education',
+    gym: 'fitness',
+    fitness: 'fitness',
+    yoga: 'fitness',
+    sports: 'sports',
+    court: 'sports',
+    plumber: 'home',
+    home: 'home',
+    professional: 'professional',
+  };
+  if (map[lower]) return map[lower];
+  return undefined;
+}
+
+function preserveNameCasing(name: string): string {
+  const trimmed = name.trim();
+  if (!trimmed) return trimmed;
+  if (/[a-z]/.test(trimmed) && /[A-Z]/.test(trimmed)) return trimmed;
+  if (/^[A-Z0-9][A-Za-z0-9&'.+-]*$/.test(trimmed) && trimmed.length <= 24) {
+    return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+  }
+  return titleCase(trimmed);
+}
+
 function cleanBusinessName(name: string): string {
-  return name
+  const cleaned = name
     .replace(/\b(salon|saloon|clinic|shop|studio|spa|business)\b/gi, '')
     .replace(/\s+/g, ' ')
     .trim();
+  return cleaned || name.trim();
 }
 
 function extractPricedServices(text: string): ServiceDraft[] {
@@ -493,6 +691,7 @@ export function buildFinalSummary(state: OnboardingState): string {
   const lines = [
     `📋 ${state.businessName || 'Your business'}`,
     `Category: ${getCategoryLabel(state.category || 'beauty')}`,
+    `Location: ${state.location || 'Not set'}`,
     `Services: ${services}`,
     `Staff: ${staff}`,
     `Hours: Mon–Sat ${hours}`,
@@ -515,6 +714,7 @@ function getCategoryLabel(category: string): string {
     fitness: 'Fitness',
     home: 'Home Services',
     professional: 'Professional Services',
+    legal: 'Legal / Professional',
   };
   return labels[category] || category;
 }

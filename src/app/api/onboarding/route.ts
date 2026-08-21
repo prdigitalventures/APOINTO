@@ -3,7 +3,7 @@ import { requireSession } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import {
   createInitialState,
-  processOnboardingMessage,
+  processOnboardingTurn,
   createBusinessFromOnboarding,
   type OnboardingState,
 } from '@/lib/ai-onboarding';
@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
       ? (JSON.parse(dbSession.state) as OnboardingState)
       : createInitialState();
 
-    const { state: newState, response } = processOnboardingMessage(state, message);
+    const { state: newState, response } = await processOnboardingTurn(state, message);
 
     if (!dbSession) {
       dbSession = await prisma.onboardingSession.create({

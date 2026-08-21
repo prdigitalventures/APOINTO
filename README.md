@@ -76,7 +76,8 @@ Required environment variables:
 - `DATABASE_URL` — pooled Postgres URL (add `pgbouncer=true` when using Neon’s pooler)
 - `DIRECT_URL` — direct (non-pooled) Postgres URL for migrations
 - `JWT_SECRET` — long random string
-- `OPENAI_API_KEY` — optional; onboarding falls back to a local NLU parser without it
+- `GEMINI_API_KEY` — optional Google Gemini key for owner onboarding (aliases: `GOOGLE_AI_API_KEY`, `GOOGLE_GENERATIVE_AI_API_KEY`). Without it, a deterministic parser still advances the wizard.
+- `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` — optional fallbacks if Gemini is unset
 - `APP_URL` — optional; defaults to `https://www.apointo.online` for email links
 - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI` — Google customer login (redirect defaults to `https://www.apointo.online/api/auth/google/callback`)
 - `RESEND_API_KEY` or `SMTP_HOST` + `SMTP_USER` + `SMTP_PASS` — send verification and password-reset emails. Without these, the app still creates tokens and prints the link in Railway logs.

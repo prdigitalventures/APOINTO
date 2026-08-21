@@ -16,7 +16,7 @@ interface AIChatProps {
 
 export function AIChat({ onComplete }: AIChatProps) {
   const [messages, setMessages] = useState<Message[]>([
-    { role: 'assistant', content: 'Hi! I can help you create your booking system. Just say "Create my booking system" to get started.' },
+    { role: 'assistant', content: "Hi! I can help you create your booking system. Say \"Create my booking system\", \"Bow\", or just tell me your business name to get started." },
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -75,7 +75,7 @@ export function AIChat({ onComplete }: AIChatProps) {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
-          placeholder='Try “Create booking system for my Green Trends salon”'
+          placeholder='Business name, or “Create my booking system”'
           disabled={loading}
         />
         <Button onClick={sendMessage} disabled={loading || !input.trim()} className="flex-shrink-0">
