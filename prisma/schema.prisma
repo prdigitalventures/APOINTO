@@ -33,6 +33,7 @@ model User {
   notifications      Notification[]
   onboardingSessions OnboardingSession[]
   feedback           Feedback[]
+  crmContacts        CrmContact[]
 }
 
 model Business {
@@ -252,4 +253,20 @@ model Feedback {
   createdAt DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model CrmContact {
+  id              String   @id @default(cuid())
+  ownerId         String
+  phone           String
+  name            String
+  notes           String?
+  statusOverride  String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  owner User @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@unique([ownerId, phone])
+  @@index([ownerId])
 }
