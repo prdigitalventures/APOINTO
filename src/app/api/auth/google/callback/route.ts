@@ -57,25 +57,37 @@ export async function GET(req: NextRequest) {
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
       code,
-      client_id: clientId,
-      client_secret: clientSecret,
+      client_id: clientId.trim(),
+      client_secret: clientSecret.trim(),
       redirect_uri: redirectUri,
       grant_type: 'authorization_code',
     }),
   });
 
-  if (!tokenRes.ok) {
-    console.error('[Google OAuth] token exchange failed', tokenRes.status);
-    return loginError('Google sign-in failed. Please try again.', role, entry);
-  }
+  const tokenPayload = (await tokenRes.json()) as {
+    access_token?: string;
+    error?: string;
+    error_description?: string;
+  };
 
-  const tokens = (await tokenRes.json()) as { access_token?: string };
-  if (!tokens.access_token) {
+  if (!tokenRes.ok || !tokenPayload.access_token) {
+    console.error('[Google OAuth] token exchange failed', {
+      status: tokenRes.status,
+      error: tokenPayload.error,
+      description: tokenPayload.error_description,
+    });
+    if (tokenPayload.error === 'invalid_client') {
+      return loginError(
+        'Google could not verify this app. Reset the client secret in Google Cloud and add the new value in Railway as GOOGLE_CLIENT_SECRET.',
+        role,
+        entry
+      );
+    }
     return loginError('Google sign-in failed. Please try again.', role, entry);
   }
 
   const profileRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-    headers: { Authorization: `Bearer ${tokens.access_token}` },
+    headers: { Authorization: `Bearer ${tokenPayload.access_token}` },
   });
   if (!profileRes.ok) {
     return loginError('Could not read your Google profile. Please try again.', role, entry);
