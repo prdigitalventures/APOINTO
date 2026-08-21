@@ -41,7 +41,8 @@ interface LocationState {
 const CITY_PRESETS = ['Bangalore', 'Mumbai', 'Delhi', 'Hyderabad', 'Chennai', 'Pune'];
 
 export default function CustomerHome() {
-  const { user, loading, logout } = useAuth();
+  const { user, loading, logout, refresh } = useAuth();
+  const [resendState, setResendState] = useState('');
   const router = useRouter();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [location, setLocation] = useState<LocationState>({ city: '', label: 'Set location' });
@@ -149,6 +150,25 @@ export default function CustomerHome() {
           </div>
           <Button variant="ghost" size="sm" onClick={logout}><LogOut size={18} /></Button>
         </div>
+
+        {user && !user.emailVerified && (
+          <div className="bg-amber-50 border border-amber-100 text-amber-800 text-sm rounded-xl p-3">
+            <p>Verify your email to book appointments. You can still browse businesses and available times.</p>
+            <button
+              type="button"
+              className="mt-2 text-indigo-700 font-medium"
+              onClick={async () => {
+                const res = await fetch('/api/auth/resend-verification', { method: 'POST' });
+                const data = await res.json();
+                setResendState(data.error || 'Verification email sent. Check your inbox.');
+                await refresh();
+              }}
+            >
+              Resend verification email
+            </button>
+            {resendState && <p className="text-xs mt-1">{resendState}</p>}
+          </div>
+        )}
 
         <div className="flex items-center gap-2 overflow-x-auto pb-1">
           <span className="flex items-center gap-1 text-xs text-indigo-700 bg-indigo-50 rounded-full px-3 py-1.5 whitespace-nowrap">

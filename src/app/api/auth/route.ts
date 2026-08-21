@@ -1,6 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { registerUser, loginUser, createToken, type UserRole } from '@/lib/auth';
-import { cookies } from 'next/headers';
+import { registerUser, loginUser, setSessionCookie, toSessionUser, type UserRole } from '@/lib/auth';
+
+function publicUser(user: ReturnType<typeof toSessionUser>) {
+  return {
+    id: user.id,
+    name: user.name,
+    phone: user.phone,
+    email: user.email,
+    role: user.role,
+    emailVerified: user.emailVerified,
+  };
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -8,43 +18,31 @@ export async function POST(req: NextRequest) {
     const { action, name, phone, password, role, email } = body;
 
     if (action === 'register') {
-      const user = await registerUser({ name, phone, password, role, email });
-      const token = await createToken({
-        id: user.id,
-        name: user.name,
-        phone: user.phone,
-        email: user.email,
-        role: user.role as UserRole,
+      if (!email) {
+        return NextResponse.json({ error: 'Email is required' }, { status: 400 });
+      }
+      const { user, verifyUrl, emailSent } = await registerUser({
+        name,
+        phone,
+        password,
+        role: role as UserRole,
+        email,
       });
-      const cookieStore = await cookies();
-      cookieStore.set('session', token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        maxAge: 60 * 60 * 24 * 7,
-        path: '/',
+      const session = toSessionUser(user);
+      await setSessionCookie(session);
+      return NextResponse.json({
+        user: publicUser(session),
+        emailSent,
+        ...(process.env.NODE_ENV !== 'production' ? { verifyUrl } : {}),
       });
-      return NextResponse.json({ user: { id: user.id, name: user.name, phone: user.phone, role: user.role } });
     }
 
     if (action === 'login') {
-      const user = await loginUser(phone, password);
-      const token = await createToken({
-        id: user.id,
-        name: user.name,
-        phone: user.phone,
-        email: user.email,
-        role: user.role as UserRole,
-      });
-      const cookieStore = await cookies();
-      cookieStore.set('session', token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        maxAge: 60 * 60 * 24 * 7,
-        path: '/',
-      });
-      return NextResponse.json({ user: { id: user.id, name: user.name, phone: user.phone, role: user.role } });
+      const identifier = phone || email || body.identifier;
+      const user = await loginUser(identifier, password);
+      const session = toSessionUser(user);
+      await setSessionCookie(session);
+      return NextResponse.json({ user: publicUser(session) });
     }
 
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
@@ -54,6 +52,7 @@ export async function POST(req: NextRequest) {
 }
 
 export async function DELETE() {
+  const { cookies } = await import('next/headers');
   const cookieStore = await cookies();
   cookieStore.delete('session');
   return NextResponse.json({ success: true });

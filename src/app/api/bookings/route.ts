@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { getSession } from '@/lib/auth';
+import { getSession, requireVerifiedCustomer } from '@/lib/auth';
 import { isSlotAvailable, calculateEndTime } from '@/lib/availability';
 import { notifyNewBookingRequest } from '@/lib/notifications';
 
@@ -9,6 +9,17 @@ export async function POST(req: NextRequest) {
     const session = await getSession();
     const body = await req.json();
     const { businessId, serviceId, staffId, date, startTime, customerName, customerPhone, customData, isWalkIn } = body;
+
+    if (isWalkIn) {
+      if (!session || session.role !== 'OWNER') {
+        return NextResponse.json({ error: 'Only business owners can add walk-ins' }, { status: 403 });
+      }
+    } else {
+      const gate = await requireVerifiedCustomer(session);
+      if (!gate.ok) {
+        return NextResponse.json({ error: gate.error }, { status: gate.status });
+      }
+    }
 
     const available = await isSlotAvailable({
       businessId,

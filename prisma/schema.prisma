@@ -10,14 +10,20 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  name      String
-  phone     String   @unique
-  email     String?
-  role      String   @default("CUSTOMER")
-  password  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                       String    @id @default(cuid())
+  name                     String
+  phone                    String    @unique
+  email                    String    @unique
+  role                     String    @default("CUSTOMER")
+  password                 String
+  googleId                 String?   @unique
+  emailVerifiedAt          DateTime?
+  emailVerifyTokenHash     String?
+  emailVerifyExpiresAt     DateTime?
+  passwordResetTokenHash   String?
+  passwordResetExpiresAt   DateTime?
+  createdAt                DateTime  @default(now())
+  updatedAt                DateTime  @updatedAt
 
   businesses         Business[]
   bookings           Booking[]           @relation("CustomerBookings")

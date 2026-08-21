@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getSession } from '@/lib/auth';
+import { getSession, toSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 
 export async function GET() {
@@ -8,8 +8,24 @@ export async function GET() {
 
   const user = await prisma.user.findUnique({
     where: { id: session.id },
-    select: { id: true, name: true, phone: true, email: true, role: true },
+    select: {
+      id: true,
+      name: true,
+      phone: true,
+      email: true,
+      role: true,
+      emailVerifiedAt: true,
+      googleId: true,
+    },
   });
 
-  return NextResponse.json({ user });
+  if (!user) return NextResponse.json({ user: null });
+
+  const sessionUser = toSessionUser(user);
+  return NextResponse.json({
+    user: {
+      ...sessionUser,
+      emailVerified: Boolean(user.emailVerifiedAt || user.googleId),
+    },
+  });
 }

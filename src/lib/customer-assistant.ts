@@ -211,10 +211,18 @@ export async function handleCustomerAssistant(opts: {
   customerName: string;
   customerPhone: string;
   confirmBooking?: boolean;
+  emailVerified?: boolean;
 }): Promise<AssistantResult> {
   const intent = parseCustomerIntent(opts.message);
 
   if (opts.confirmBooking || intent.confirm) {
+    if (!opts.emailVerified) {
+      return {
+        reply: 'Please verify your email before I can book. You can still browse available times. Check your inbox for the verification link, or open Account and resend it.',
+        speak: true,
+        needsConsent: false,
+      };
+    }
     const proposal = opts.proposal;
     if (!proposal) {
       return {

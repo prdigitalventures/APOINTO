@@ -6,14 +6,16 @@ interface User {
   id: string;
   name: string;
   phone: string;
+  email?: string | null;
   role: 'OWNER' | 'CUSTOMER';
+  emailVerified?: boolean;
 }
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
   login: (phone: string, password: string) => Promise<void>;
-  register: (data: { name: string; phone: string; password: string; role?: string }) => Promise<void>;
+  register: (data: { name: string; phone: string; password: string; email: string; role?: string }) => Promise<void>;
   logout: () => Promise<void>;
   refresh: () => Promise<void>;
 }
@@ -49,7 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(data.user);
   };
 
-  const register = async (data: { name: string; phone: string; password: string; role?: string }) => {
+  const register = async (data: { name: string; phone: string; password: string; email: string; role?: string }) => {
     const res = await fetch('/api/auth', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

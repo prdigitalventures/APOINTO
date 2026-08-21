@@ -8,25 +8,27 @@ async function main() {
 
   const owner = await prisma.user.upsert({
     where: { phone: '9876543210' },
-    update: {},
+    update: { email: 'ravi@example.com', emailVerifiedAt: new Date() },
     create: {
       name: 'Ravi Kumar',
       phone: '9876543210',
       password,
       role: 'OWNER',
       email: 'ravi@example.com',
+      emailVerifiedAt: new Date(),
     },
   });
 
   const customer = await prisma.user.upsert({
     where: { phone: '9876543211' },
-    update: {},
+    update: { email: 'ranjith@example.com', emailVerifiedAt: new Date() },
     create: {
       name: 'Ranjith',
       phone: '9876543211',
       password,
       role: 'CUSTOMER',
       email: 'ranjith@example.com',
+      emailVerifiedAt: new Date(),
     },
   });
 

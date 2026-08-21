@@ -8,6 +8,7 @@ import { formatCurrency, formatTime12h } from '@/lib/utils';
 import { format, addDays } from 'date-fns';
 import { ArrowLeft, Check } from 'lucide-react';
 import type { BusinessBookingSchema } from '@/lib/booking-schema';
+import { useAuth } from '@/components/AuthProvider';
 
 interface Business {
   id: string;
@@ -33,6 +34,13 @@ export default function BookingFlow({ params }: { params: { slug: string } }) {
   const [customerPhone, setCustomerPhone] = useState('');
   const [loading, setLoading] = useState(false);
   const [bookingId, setBookingId] = useState('');
+  const [error, setError] = useState('');
+  const { user } = useAuth();
+
+  useEffect(() => {
+    if (user?.name && !customerName) setCustomerName(user.name);
+    if (user?.phone && !customerPhone) setCustomerPhone(user.phone);
+  }, [user, customerName, customerPhone]);
 
   useEffect(() => {
     fetch(`/api/businesses/${params.slug}`)
@@ -64,7 +72,16 @@ export default function BookingFlow({ params }: { params: { slug: string } }) {
 
   const submitBooking = async () => {
     if (!business) return;
+    if (!user) {
+      setError('Please log in and verify your email before booking. You can still browse available times.');
+      return;
+    }
+    if (!user.emailVerified) {
+      setError('Please verify your email before booking. Check your inbox, or open Home to resend the link.');
+      return;
+    }
     setLoading(true);
+    setError('');
     try {
       const res = await fetch('/api/bookings', {
         method: 'POST',
@@ -83,6 +100,8 @@ export default function BookingFlow({ params }: { params: { slug: string } }) {
       if (res.ok) {
         setBookingId(data.booking.id);
         setStep('done');
+      } else {
+        setError(data.error || 'Could not send booking request');
       }
     } finally {
       setLoading(false);
@@ -234,6 +253,19 @@ export default function BookingFlow({ params }: { params: { slug: string } }) {
         {step === 'confirm' && (
           <div className="space-y-4">
             <h2 className="font-semibold text-lg mb-4">Confirm booking</h2>
+            {error && <div className="bg-red-50 text-red-600 text-sm rounded-lg p-3">{error}</div>}
+            {!user && (
+              <p className="text-sm text-gray-600">
+                You can browse availability freely.{' '}
+                <Link href="/login" className="text-indigo-600 font-medium">Log in</Link>
+                {' '}and verify your email to send a booking request.
+              </p>
+            )}
+            {user && !user.emailVerified && (
+              <p className="text-sm text-amber-700 bg-amber-50 rounded-lg p-3">
+                Your account is not verified yet. Verify the email we sent to book this slot.
+              </p>
+            )}
             <div className="bg-white rounded-2xl border p-4 space-y-3">
               <div className="flex justify-between"><span className="text-gray-500">Service</span><span className="font-medium">{service?.name}</span></div>
               {staffMember && <div className="flex justify-between"><span className="text-gray-500">Staff</span><span className="font-medium">{staffMember.name}</span></div>}

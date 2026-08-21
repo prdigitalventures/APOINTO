@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSession } from '@/lib/auth';
+import { customerCanBook, getSession } from '@/lib/auth';
 import { handleCustomerAssistant, type AssistantProposal } from '@/lib/customer-assistant';
 
 export async function POST(req: NextRequest) {
@@ -8,6 +8,7 @@ export async function POST(req: NextRequest) {
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const body = await req.json();
+    const emailVerified = await customerCanBook(session.id);
     const result = await handleCustomerAssistant({
       message: body.message || '',
       city: body.city,
@@ -18,6 +19,7 @@ export async function POST(req: NextRequest) {
       customerName: session.name,
       customerPhone: session.phone,
       confirmBooking: !!body.confirmBooking,
+      emailVerified,
     });
 
     return NextResponse.json(result);

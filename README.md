@@ -77,6 +77,11 @@ Required environment variables:
 - `DIRECT_URL` — direct (non-pooled) Postgres URL for migrations
 - `JWT_SECRET` — long random string
 - `OPENAI_API_KEY` — optional; onboarding falls back to a local NLU parser without it
+- `APP_URL` — optional; defaults to `https://www.apointo.online` for email links
+- `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI` — Google customer login (redirect defaults to `https://www.apointo.online/api/auth/google/callback`)
+- `RESEND_API_KEY` or `SMTP_HOST` + `SMTP_USER` + `SMTP_PASS` — send verification and password-reset emails. Without these, the app still creates tokens and prints the link in Railway logs.
+
+Customer accounts must use a unique email and phone. Booking is blocked until the email is verified (or the account is linked via Google). Availability browsing stays open.
 
 Build runs `prisma migrate deploy` and seeds demo accounts.
 
