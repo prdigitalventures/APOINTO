@@ -88,14 +88,6 @@ export default function HomePage() {
     }
   }, [user, loading, router]);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-pulse text-gray-400">Loading...</div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen flex flex-col">
       <header className="sticky top-0 z-30 bg-white/90 backdrop-blur border-b border-gray-100">
