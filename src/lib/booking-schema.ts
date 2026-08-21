@@ -155,19 +155,58 @@ const CATEGORY_SCHEMAS: Record<string, BusinessBookingSchema> = {
       { id: 'address', label: 'Service Address', type: 'text' },
     ],
   },
+  legal: {
+    category: 'legal',
+    steps: [
+      { id: 'service', type: 'service', label: 'Choose Service', required: true },
+      { id: 'staff', type: 'staff', label: 'Choose Lawyer', required: false },
+      { id: 'date', type: 'date', label: 'Choose Date', required: true },
+      { id: 'time', type: 'time', label: 'Choose Time', required: true },
+      { id: 'customer', type: 'customer_info', label: 'Your Details', required: true },
+    ],
+    staffRequired: false,
+  },
 };
 
-export function inferCategory(text: string): string {
-  const lower = text.toLowerCase();
-  if (/salon|hair|beauty|spa|facial|barber|nail|makeup/.test(lower)) return 'beauty';
-  if (/doctor|clinic|dental|hospital|medical|health/.test(lower)) return 'health';
-  if (/car|auto|vehicle|garage|mechanic/.test(lower)) return 'auto';
-  if (/photo|photograph|wedding|event/.test(lower)) return 'professional';
-  if (/tutor|teach|class|education|coaching/.test(lower)) return 'education';
-  if (/sport|court|badminton|tennis|cricket|gym|arena/.test(lower)) return 'sports';
-  if (/fitness|yoga|trainer|workout/.test(lower)) return 'fitness';
-  if (/plumb|electric|clean|repair|home/.test(lower)) return 'home';
-  return 'beauty';
+const CATEGORY_RULES: Array<{ id: string; pattern: RegExp }> = [
+  { id: 'legal', pattern: /\b(lawyer|lawyers|legal|advocate|attorney|litigation|notary|law\s*firm|counsel|solicitor)\b/ },
+  { id: 'beauty', pattern: /\b(salon|saloon|beauty|parlour|parlor|barber|haircut|hair\s*cut|hair\s*spa|facial|makeup|manicure|pedicure)\b/ },
+  { id: 'health', pattern: /\b(doctor|clinic|dental|dentist|hospital|medical|health|physician)\b/ },
+  { id: 'auto', pattern: /\b(car|auto|vehicle|garage|mechanic|workshop)\b/ },
+  { id: 'professional', pattern: /\b(photo|photograph|photographer|wedding|event\s*planner)\b/ },
+  { id: 'education', pattern: /\b(tutor|tuition|teach|teacher|class|education|coaching|academy)\b/ },
+  { id: 'sports', pattern: /\b(sport|court|badminton|tennis|cricket|arena)\b/ },
+  { id: 'fitness', pattern: /\b(fitness|yoga|trainer|workout|gym)\b/ },
+  { id: 'home', pattern: /\b(plumb|plumber|electric|electrician|clean(?:ing)?|repair|home\s*service)\b/ },
+];
+
+/** Words the owner might negate when correcting a wrong guess ("it is not beauty"). */
+const CATEGORY_NOUNS = CATEGORY_RULES.map((r) => r.id).concat([
+  'salon',
+  'saloon',
+  'beauty',
+  'lawyer',
+  'legal',
+  'clinic',
+  'hospital',
+  'garage',
+  'tutor',
+  'sports',
+  'fitness',
+  'gym',
+]);
+
+export function stripNegatedCategoryPhrases(text: string): string {
+  const nouns = CATEGORY_NOUNS.join('|');
+  return text.replace(new RegExp(`\\b(?:not|n't|isnt|isn't)\\s+(?:a\\s+|an\\s+)?(?:${nouns})\\b`, 'gi'), ' ');
+}
+
+export function inferCategory(text: string): string | undefined {
+  const lower = stripNegatedCategoryPhrases(text).toLowerCase();
+  for (const rule of CATEGORY_RULES) {
+    if (rule.pattern.test(lower)) return rule.id;
+  }
+  return undefined;
 }
 
 export function getBookingSchema(category: string): BusinessBookingSchema {
@@ -181,6 +220,7 @@ export function getCategoryDisplayName(category: string): string {
     health: 'Health & Wellness',
     auto: 'Auto Service',
     professional: 'Professional Services',
+    legal: 'Legal / Professional',
     education: 'Education & Tutoring',
     sports: 'Sports & Recreation',
     fitness: 'Fitness',

@@ -59,4 +59,5 @@ export const CATEGORIES = [
   { id: 'home', name: 'Home Services', icon: '🏠' },
   { id: 'sports', name: 'Sports', icon: '⚽' },
   { id: 'professional', name: 'Professional', icon: '💼' },
+  { id: 'legal', name: 'Legal', icon: '⚖️' },
 ];

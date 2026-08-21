@@ -116,7 +116,7 @@ export default function BusinessPage({ params }: { params: { slug: string } }) {
 function getCategoryEmoji(category: string): string {
   const emojis: Record<string, string> = {
     beauty: '💇', health: '🏥', auto: '🚗', education: '📚',
-    sports: '⚽', fitness: '💪', home: '🏠', professional: '📸',
+    sports: '⚽', fitness: '💪', home: '🏠', professional: '📸', legal: '⚖️',
   };
   return emojis[category] || '🏢';
 }
