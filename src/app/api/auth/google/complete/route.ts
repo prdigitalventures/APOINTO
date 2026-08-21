@@ -3,6 +3,8 @@ import { cookies } from 'next/headers';
 import { jwtVerify } from 'jose';
 import { setSessionCookie, toSessionUser, upsertGoogleUser, type UserRole } from '@/lib/auth';
 
+export const dynamic = 'force-dynamic';
+
 const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || 'apointo-dev-secret');
 
 export async function GET() {

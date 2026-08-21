@@ -4,6 +4,8 @@ import { SignJWT } from 'jose';
 import { setSessionCookie, toSessionUser, upsertGoogleUser, type UserRole } from '@/lib/auth';
 import { appBaseUrl, googleRedirectUri } from '@/lib/app-url';
 
+export const dynamic = 'force-dynamic';
+
 const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || 'apointo-dev-secret');
 
 function loginError(_req: NextRequest, message: string) {

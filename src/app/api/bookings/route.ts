@@ -4,6 +4,8 @@ import { getSession, requireVerifiedCustomer } from '@/lib/auth';
 import { isSlotAvailable, calculateEndTime } from '@/lib/availability';
 import { notifyNewBookingRequest } from '@/lib/notifications';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(req: NextRequest) {
   try {
     const session = await getSession();

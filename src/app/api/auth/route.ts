@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { registerUser, loginUser, setSessionCookie, toSessionUser, type UserRole } from '@/lib/auth';
 
+export const dynamic = 'force-dynamic';
+
 function publicUser(user: ReturnType<typeof toSessionUser>) {
   return {
     id: user.id,
