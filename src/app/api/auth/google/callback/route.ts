@@ -3,13 +3,23 @@ import { cookies } from 'next/headers';
 import { SignJWT } from 'jose';
 import { setSessionCookie, toSessionUser, upsertGoogleUser, type UserRole } from '@/lib/auth';
 import { appBaseUrl, googleRedirectUri } from '@/lib/app-url';
+import {
+  authDestination,
+  authenticatedDestination,
+  parseAuthIntentRole,
+} from '@/lib/auth-intent';
 
 export const dynamic = 'force-dynamic';
 
 const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || 'apointo-dev-secret');
 
-function loginError(_req: NextRequest, message: string) {
-  const url = new URL('/login', appBaseUrl());
+function loginError(
+  message: string,
+  role: UserRole = 'CUSTOMER',
+  entry: 'login' | 'register' = 'login'
+) {
+  const url = new URL(`/${entry}`, appBaseUrl());
+  url.searchParams.set('role', role.toLowerCase());
   url.searchParams.set('error', message);
   return NextResponse.redirect(url);
 }
@@ -21,8 +31,7 @@ export async function GET(req: NextRequest) {
 
   if (!clientId || !clientSecret) {
     return loginError(
-      req,
-      'Google sign-in is not configured yet. Add GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, and GOOGLE_REDIRECT_URI on the server.'
+      'Google sign-in is temporarily unavailable. Please use email and password or try again later.'
     );
   }
 
@@ -30,13 +39,17 @@ export async function GET(req: NextRequest) {
   const state = req.nextUrl.searchParams.get('state');
   const cookieStore = await cookies();
   const expectedState = cookieStore.get('google_oauth_state')?.value;
-  const role = (cookieStore.get('google_oauth_role')?.value === 'OWNER' ? 'OWNER' : 'CUSTOMER') as UserRole;
+  const role = parseAuthIntentRole(cookieStore.get('google_oauth_role')?.value) as UserRole;
+  const next = authDestination(cookieStore.get('google_oauth_next')?.value, role);
+  const entry = cookieStore.get('google_oauth_entry')?.value === 'register' ? 'register' : 'login';
 
   cookieStore.delete('google_oauth_state');
   cookieStore.delete('google_oauth_role');
+  cookieStore.delete('google_oauth_next');
+  cookieStore.delete('google_oauth_entry');
 
   if (!code || !state || !expectedState || state !== expectedState) {
-    return loginError(req, 'Google sign-in was cancelled or expired. Please try again.');
+    return loginError('Google sign-in was cancelled or expired. Please try again.', role, entry);
   }
 
   const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
@@ -52,21 +65,20 @@ export async function GET(req: NextRequest) {
   });
 
   if (!tokenRes.ok) {
-    const detail = await tokenRes.text();
-    console.error('[Google OAuth] token exchange failed', tokenRes.status, detail);
-    return loginError(req, 'Google sign-in failed. Please try again.');
+    console.error('[Google OAuth] token exchange failed', tokenRes.status);
+    return loginError('Google sign-in failed. Please try again.', role, entry);
   }
 
   const tokens = (await tokenRes.json()) as { access_token?: string };
   if (!tokens.access_token) {
-    return loginError(req, 'Google sign-in failed. Please try again.');
+    return loginError('Google sign-in failed. Please try again.', role, entry);
   }
 
   const profileRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
     headers: { Authorization: `Bearer ${tokens.access_token}` },
   });
   if (!profileRes.ok) {
-    return loginError(req, 'Could not read your Google profile. Please try again.');
+    return loginError('Could not read your Google profile. Please try again.', role, entry);
   }
 
   const profile = (await profileRes.json()) as {
@@ -77,7 +89,11 @@ export async function GET(req: NextRequest) {
   };
 
   if (!profile.sub || !profile.email) {
-    return loginError(req, 'Google did not share an email address. Please allow email access or sign up with email.');
+    return loginError(
+      'Google did not share an email address. Please allow email access or sign up with email.',
+      role,
+      entry
+    );
   }
 
   try {
@@ -94,6 +110,7 @@ export async function GET(req: NextRequest) {
         email: profile.email,
         name: profile.name || profile.email.split('@')[0],
         role,
+        next,
       })
         .setProtectedHeader({ alg: 'HS256' })
         .setExpirationTime('15m')
@@ -110,9 +127,9 @@ export async function GET(req: NextRequest) {
     }
 
     await setSessionCookie(toSessionUser(result.user));
-    const dest = result.user.role === 'OWNER' ? '/owner' : '/customer';
+    const dest = authenticatedDestination(next, role, result.user.role as UserRole);
     return NextResponse.redirect(new URL(dest, appBaseUrl()));
   } catch (error) {
-    return loginError(req, (error as Error).message);
+    return loginError((error as Error).message, role, entry);
   }
 }

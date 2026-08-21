@@ -7,6 +7,7 @@ import { useAuth } from '@/components/AuthProvider';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { GoogleButton, RequiredMark } from '@/components/AuthFields';
+import { OWNER_ONBOARDING_PATH, parseAuthIntentRole } from '@/lib/auth-intent';
 
 function RegisterForm() {
   const router = useRouter();
@@ -16,9 +17,9 @@ function RegisterForm() {
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [error, setError] = useState(searchParams.get('error') || '');
   const [loading, setLoading] = useState(false);
-  const role = searchParams.get('role') === 'owner' ? 'OWNER' : 'CUSTOMER';
+  const role = parseAuthIntentRole(searchParams.get('role'));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -79,10 +80,18 @@ function RegisterForm() {
             <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200" /></div>
             <div className="relative flex justify-center text-xs uppercase"><span className="bg-white px-2 text-gray-400">or</span></div>
           </div>
-          <GoogleButton role={role} label="Sign up with Google" />
+          <GoogleButton
+            role={role}
+            next={role === 'OWNER' ? OWNER_ONBOARDING_PATH : '/customer'}
+            from="register"
+            label="Sign up with Google"
+          />
         </form>
         <p className="text-center text-sm text-gray-600 mt-4">
-          Already have an account? <Link href="/login" className="text-indigo-600 font-medium">Log in</Link>
+          Already have an account?{' '}
+          <Link href={`/login?role=${role === 'OWNER' ? 'owner' : 'customer'}`} className="text-indigo-600 font-medium">
+            Log in
+          </Link>
         </p>
       </div>
     </div>

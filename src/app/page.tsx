@@ -112,12 +112,12 @@ export default function HomePage() {
           </nav>
 
           <div className="hidden md:flex gap-3">
-            <Link href="/login">
+            <Link href="/login?role=owner">
               <Button variant="ghost" size="sm">
-                Log in
+                Owner Log in
               </Button>
             </Link>
-            <Link href="/register">
+            <Link href="/register?role=owner">
               <Button size="sm">Get Started</Button>
             </Link>
           </div>
@@ -146,12 +146,12 @@ export default function HomePage() {
               </a>
             ))}
             <div className="flex gap-3 pt-3">
-              <Link href="/login" className="flex-1" onClick={() => setMenuOpen(false)}>
+              <Link href="/login?role=owner" className="flex-1" onClick={() => setMenuOpen(false)}>
                 <Button variant="ghost" size="sm" className="w-full">
-                  Log in
+                  Owner Log in
                 </Button>
               </Link>
-              <Link href="/register" className="flex-1" onClick={() => setMenuOpen(false)}>
+              <Link href="/register?role=owner" className="flex-1" onClick={() => setMenuOpen(false)}>
                 <Button size="sm" className="w-full">
                   Get Started
                 </Button>

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { jwtVerify } from 'jose';
 import { setSessionCookie, toSessionUser, upsertGoogleUser, type UserRole } from '@/lib/auth';
+import { authenticatedDestination } from '@/lib/auth-intent';
 
 export const dynamic = 'force-dynamic';
 
@@ -37,6 +38,7 @@ export async function POST(req: NextRequest) {
     const email = String(payload.email || '');
     const name = String(payload.name || '');
     const role = (payload.role === 'OWNER' ? 'OWNER' : 'CUSTOMER') as UserRole;
+    const next = String(payload.next || '');
     if (!googleId || !email) {
       return NextResponse.json({ error: 'Google sign-up expired. Please start again.' }, { status: 400 });
     }
@@ -58,6 +60,7 @@ export async function POST(req: NextRequest) {
     const session = toSessionUser(result.user);
     await setSessionCookie(session);
     return NextResponse.json({
+      next: authenticatedDestination(next, role, session.role),
       user: {
         id: session.id,
         name: session.name,

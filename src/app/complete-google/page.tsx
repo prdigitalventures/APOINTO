@@ -20,8 +20,9 @@ export default function CompleteGooglePage() {
       .then((r) => r.json())
       .then((d) => {
         if (d.pending?.name) setName(d.pending.name);
+        if (!d.pending) setError('Google sign-up expired. Please start again.');
       })
-      .catch(() => undefined);
+      .catch(() => setError('Could not load your Google sign-up. Please start again.'));
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -37,7 +38,7 @@ export default function CompleteGooglePage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       await refresh();
-      router.push(data.user?.role === 'OWNER' ? '/owner' : '/customer');
+      router.push(data.next || (data.user?.role === 'OWNER' ? '/owner' : '/customer'));
     } catch (err) {
       setError((err as Error).message);
     } finally {

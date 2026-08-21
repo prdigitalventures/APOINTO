@@ -26,6 +26,12 @@ export default function OwnerDashboard() {
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('onboarding') === '1') {
+      setShowOnboarding(true);
+    }
+  }, []);
+
+  useEffect(() => {
     if (!loading && !user) router.push('/login');
     if (!loading && user && user.role !== 'OWNER') router.push('/customer');
   }, [user, loading, router]);

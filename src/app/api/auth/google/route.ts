@@ -2,23 +2,33 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createSecretToken } from '@/lib/identity';
 import { appBaseUrl, googleRedirectUri } from '@/lib/app-url';
+import { authDestination, parseAuthIntentRole } from '@/lib/auth-intent';
 
 export const dynamic = 'force-dynamic';
+
+function authErrorUrl(role: 'OWNER' | 'CUSTOMER', entry: 'login' | 'register', message: string) {
+  const url = new URL(`/${entry}`, appBaseUrl());
+  url.searchParams.set('role', role.toLowerCase());
+  url.searchParams.set('error', message);
+  return url;
+}
 
 export async function GET(req: NextRequest) {
   const clientId = process.env.GOOGLE_CLIENT_ID;
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
   const redirectUri = googleRedirectUri();
-  const role = req.nextUrl.searchParams.get('role') === 'OWNER' ? 'OWNER' : 'CUSTOMER';
-  const next = req.nextUrl.searchParams.get('next') || '';
+  const role = parseAuthIntentRole(req.nextUrl.searchParams.get('role'));
+  const next = authDestination(req.nextUrl.searchParams.get('next'), role);
+  const entry = req.nextUrl.searchParams.get('from') === 'register' ? 'register' : 'login';
 
   if (!clientId || !clientSecret) {
-    const login = new URL('/login', appBaseUrl());
-    login.searchParams.set(
-      'error',
-      'Google sign-in is not configured yet. Add GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, and GOOGLE_REDIRECT_URI on the server.'
+    return NextResponse.redirect(
+      authErrorUrl(
+        role,
+        entry,
+        'Google sign-in is temporarily unavailable. Please use email and password or try again later.'
+      )
     );
-    return NextResponse.redirect(login);
   }
 
   const state = createSecretToken();
@@ -37,15 +47,20 @@ export async function GET(req: NextRequest) {
     maxAge: 60 * 15,
     path: '/',
   });
-  if (next) {
-    cookieStore.set('google_oauth_next', next, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 60 * 15,
-      path: '/',
-    });
-  }
+  cookieStore.set('google_oauth_next', next, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: 60 * 15,
+    path: '/',
+  });
+  cookieStore.set('google_oauth_entry', entry, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: 60 * 15,
+    path: '/',
+  });
 
   const url = new URL('https://accounts.google.com/o/oauth2/v2/auth');
   url.searchParams.set('client_id', clientId);

@@ -5,21 +5,24 @@ export function RequiredMark() {
 export function GoogleButton({
   role,
   next,
+  from = 'login',
   label = 'Continue with Google',
 }: {
   role?: 'OWNER' | 'CUSTOMER';
   next?: string;
+  from?: 'login' | 'register';
   label?: string;
 }) {
   const params = new URLSearchParams();
-  if (role) params.set('role', role);
+  if (role) params.set('role', role.toLowerCase());
   if (next) params.set('next', next);
+  params.set('from', from);
   const href = `/api/auth/google${params.toString() ? `?${params}` : ''}`;
 
   return (
     <a
       href={href}
-      className="w-full inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-800 hover:bg-gray-50"
+      className="w-full inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-800 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
     >
       <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
         <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 8 3.1l5.7-5.7C34.2 6.1 29.4 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.2-.1-2.3-.4-3.5z" />

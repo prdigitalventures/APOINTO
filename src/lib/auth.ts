@@ -281,6 +281,7 @@ export async function upsertGoogleUser(profile: {
       data: {
         email,
         emailVerifiedAt: existingByGoogle.emailVerifiedAt || new Date(),
+        ...(profile.role === 'OWNER' ? { role: 'OWNER' } : {}),
       },
     });
     return { user, created: false };
@@ -293,6 +294,7 @@ export async function upsertGoogleUser(profile: {
       data: {
         googleId: profile.googleId,
         emailVerifiedAt: new Date(),
+        ...(profile.role === 'OWNER' ? { role: 'OWNER' } : {}),
       },
     });
     return { user, created: false };
