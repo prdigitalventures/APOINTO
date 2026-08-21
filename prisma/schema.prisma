@@ -22,6 +22,9 @@ model User {
   emailVerifyExpiresAt     DateTime?
   passwordResetTokenHash   String?
   passwordResetExpiresAt   DateTime?
+  avatar                   String?
+  rewardPoints             Int       @default(0)
+  referralCode             String?   @unique
   createdAt                DateTime  @default(now())
   updatedAt                DateTime  @updatedAt
 
@@ -29,6 +32,7 @@ model User {
   bookings           Booking[]           @relation("CustomerBookings")
   notifications      Notification[]
   onboardingSessions OnboardingSession[]
+  feedback           Feedback[]
 }
 
 model Business {
@@ -236,6 +240,16 @@ model OnboardingSession {
   completed Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Feedback {
+  id        String   @id @default(cuid())
+  userId    String
+  message   String
+  rating    Int?
+  createdAt DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

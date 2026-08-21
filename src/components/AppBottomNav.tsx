@@ -24,7 +24,7 @@ function BottomNav({ items, label }: { items: NavItem[]; label: string }) {
   return (
     <nav
       aria-label={label}
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-indigo-100 bg-white/95 shadow-[0_-4px_16px_rgba(79,70,229,0.06)] backdrop-blur safe-bottom"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-indigo-100 bg-white/95 shadow-[0_-4px_16px_rgba(79,70,229,0.06)] backdrop-blur safe-bottom dark:border-gray-800 dark:bg-[#16181d]/95"
     >
       <div className="mx-auto flex max-w-lg px-1 py-1.5">
         {items.map(({ href, label: itemLabel, icon: Icon, exact }) => {
@@ -37,8 +37,8 @@ function BottomNav({ items, label }: { items: NavItem[]; label: string }) {
               aria-current={active ? 'page' : undefined}
               className={`flex min-w-0 flex-1 flex-col items-center rounded-xl px-1 py-1.5 transition-colors ${
                 active
-                  ? 'bg-indigo-50 text-indigo-700'
-                  : 'text-gray-500 hover:bg-violet-50 hover:text-violet-700'
+                  ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-200'
+                  : 'text-gray-500 hover:bg-violet-50 hover:text-violet-700 dark:text-gray-400 dark:hover:bg-gray-800'
               }`}
             >
               <Icon size={20} strokeWidth={active ? 2.5 : 2} />

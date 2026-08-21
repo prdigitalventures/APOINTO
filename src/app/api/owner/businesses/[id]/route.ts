@@ -1,0 +1,44 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { requireOwner } from '@/lib/auth';
+import { prisma } from '@/lib/db';
+
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const session = await requireOwner();
+    const business = await prisma.business.findFirst({
+      where: { id: params.id, ownerId: session.id },
+    });
+    if (!business) return NextResponse.json({ error: 'Business not found' }, { status: 404 });
+
+    const body = await req.json();
+    const data: Record<string, unknown> = {};
+
+    if (typeof body.name === 'string' && body.name.trim()) data.name = body.name.trim().slice(0, 80);
+    if (typeof body.category === 'string' && body.category.trim()) data.category = body.category.trim().slice(0, 40);
+    if (typeof body.location === 'string') data.location = body.location.trim().slice(0, 120) || null;
+    if (typeof body.description === 'string') data.description = body.description.trim().slice(0, 500) || null;
+    if (typeof body.about === 'string') data.about = body.about.trim().slice(0, 2000) || null;
+    if (body.logo === null) data.logo = null;
+    else if (typeof body.logo === 'string') {
+      if (body.logo.length > 350_000) {
+        return NextResponse.json({ error: 'Photo is too large. Try a smaller image.' }, { status: 400 });
+      }
+      if (body.logo && !body.logo.startsWith('data:image/')) {
+        return NextResponse.json({ error: 'Upload a photo file.' }, { status: 400 });
+      }
+      data.logo = body.logo;
+    }
+
+    const updated = await prisma.business.update({
+      where: { id: business.id },
+      data,
+    });
+
+    return NextResponse.json({ business: updated });
+  } catch (error) {
+    return NextResponse.json({ error: (error as Error).message }, { status: 400 });
+  }
+}

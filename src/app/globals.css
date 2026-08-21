@@ -6,7 +6,13 @@
 
 :root {
   --foreground: #111827;
-  --background: #ffffff;
+  --background: #f9fafb;
+}
+
+html.dark {
+  color-scheme: dark;
+  --foreground: #f3f4f6;
+  --background: #0b0d12;
 }
 
 body {

@@ -1,5 +1,5 @@
-import { AccountPage } from '@/components/AccountPage';
+import { ProfileHub } from '@/components/profile/ProfileHub';
 
 export default function CustomerProfilePage() {
-  return <AccountPage expectedRole="CUSTOMER" />;
+  return <ProfileHub expectedRole="CUSTOMER" />;
 }

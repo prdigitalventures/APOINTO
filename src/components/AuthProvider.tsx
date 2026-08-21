@@ -9,6 +9,10 @@ interface User {
   email?: string | null;
   role: 'OWNER' | 'CUSTOMER';
   emailVerified?: boolean;
+  avatar?: string | null;
+  rewardPoints?: number;
+  referralCode?: string;
+  referralLink?: string;
 }
 
 interface AuthContextType {
