@@ -49,6 +49,8 @@ model Business {
   timezone           String   @default("Asia/Kolkata")
   logo               String?
   about              String?
+  uniqueCode         String?  @unique
+  contactPhone       String?
   bookingSchema      String?
   bookingRules       String?
   advanceBookingDays Int      @default(30)

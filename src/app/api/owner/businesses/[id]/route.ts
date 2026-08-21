@@ -21,6 +21,7 @@ export async function PATCH(
     if (typeof body.location === 'string') data.location = body.location.trim().slice(0, 120) || null;
     if (typeof body.description === 'string') data.description = body.description.trim().slice(0, 500) || null;
     if (typeof body.about === 'string') data.about = body.about.trim().slice(0, 2000) || null;
+    if (typeof body.contactPhone === 'string') data.contactPhone = body.contactPhone.trim().slice(0, 20) || null;
     if (body.logo === null) data.logo = null;
     else if (typeof body.logo === 'string') {
       if (body.logo.length > 350_000) {

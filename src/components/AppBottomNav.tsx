@@ -5,11 +5,14 @@ import { usePathname } from 'next/navigation';
 import {
   Bell,
   CalendarDays,
+  ChevronsUpDown,
   Home,
   UserRound,
   UsersRound,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import { useState } from 'react';
+import { useActiveBusiness } from './ActiveBusinessProvider';
 
 interface NavItem {
   href: string;
@@ -24,7 +27,7 @@ function BottomNav({ items, label }: { items: NavItem[]; label: string }) {
   return (
     <nav
       aria-label={label}
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-indigo-100 bg-white/95 shadow-[0_-4px_16px_rgba(79,70,229,0.06)] backdrop-blur safe-bottom dark:border-gray-800 dark:bg-[#16181d]/95"
+      className="border-t border-indigo-100 bg-white/95 backdrop-blur dark:border-gray-800 dark:bg-[#16181d]/95"
     >
       <div className="mx-auto flex max-w-lg px-1 py-1.5">
         {items.map(({ href, label: itemLabel, icon: Icon, exact }) => {
@@ -67,9 +70,54 @@ const ownerItems: NavItem[] = [
 ];
 
 export function CustomerBottomNav() {
-  return <BottomNav items={customerItems} label="Customer navigation" />;
+  return (
+    <div className="fixed inset-x-0 bottom-0 z-40 safe-bottom">
+      <BottomNav items={customerItems} label="Customer navigation" />
+    </div>
+  );
 }
 
 export function OwnerBottomNav() {
-  return <BottomNav items={ownerItems} label="Owner navigation" />;
+  const { businesses, active, setActiveId } = useActiveBusiness();
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="fixed inset-x-0 bottom-0 z-40 safe-bottom">
+      {businesses.length > 1 ? (
+        <div className="border-t border-indigo-100 bg-white/95 px-3 py-1.5 dark:border-gray-800 dark:bg-[#16181d]/95">
+          <div className="relative mx-auto max-w-lg">
+            <button
+              type="button"
+              onClick={() => setOpen((v) => !v)}
+              className="flex w-full items-center justify-between rounded-lg bg-indigo-50 px-3 py-1.5 text-left text-xs font-medium text-indigo-800 dark:bg-indigo-950 dark:text-indigo-200"
+            >
+              <span className="truncate">Switch business: {active?.name || 'Select'}</span>
+              <ChevronsUpDown size={14} />
+            </button>
+            {open ? (
+              <div className="absolute bottom-full left-0 right-0 mb-1 max-h-56 overflow-auto rounded-xl border border-gray-100 bg-white dark:border-gray-800 dark:bg-[#16181d]">
+                {businesses.map((biz) => (
+                  <button
+                    key={biz.id}
+                    type="button"
+                    onClick={() => {
+                      setActiveId(biz.id);
+                      setOpen(false);
+                    }}
+                    className={`block w-full px-3 py-2 text-left text-sm ${
+                      biz.id === active?.id ? 'bg-indigo-50 font-medium dark:bg-indigo-950' : ''
+                    }`}
+                  >
+                    {biz.name}
+                    <span className="ml-2 text-xs capitalize text-gray-500">{biz.category}</span>
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+      <BottomNav items={ownerItems} label="Owner navigation" />
+    </div>
+  );
 }

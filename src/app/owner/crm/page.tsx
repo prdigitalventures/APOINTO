@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { format } from 'date-fns';
 import { MessageCircle, Phone, Plus, Search, UsersRound } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
+import { useActiveBusiness } from '@/components/ActiveBusinessProvider';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { formatTime12h } from '@/lib/utils';
@@ -31,9 +32,10 @@ const STATUS_STYLE: Record<CrmStatus, string> = {
 
 export default function OwnerCrmPage() {
   const { user, loading } = useAuth();
+  const { active, businesses } = useActiveBusiness();
   const router = useRouter();
   const [customers, setCustomers] = useState<Customer[]>([]);
-  const [shops, setShops] = useState<Array<{ id: string; name: string }>>([]);
+  const shops = businesses.map((b) => ({ id: b.id, name: b.name }));
   const [q, setQ] = useState('');
   const [businessId, setBusinessId] = useState('');
   const [loaded, setLoaded] = useState(false);
@@ -53,11 +55,8 @@ export default function OwnerCrmPage() {
   }, [loading, router, user]);
 
   useEffect(() => {
-    if (!user || user.role !== 'OWNER') return;
-    fetch('/api/businesses')
-      .then((r) => r.json())
-      .then((d) => setShops((d.businesses || []).map((b: { id: string; name: string }) => ({ id: b.id, name: b.name }))));
-  }, [user]);
+    if (active?.id) setBusinessId(active.id);
+  }, [active?.id]);
 
   const query = useMemo(() => {
     const params = new URLSearchParams();

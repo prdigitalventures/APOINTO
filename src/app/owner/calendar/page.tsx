@@ -4,6 +4,7 @@ import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/components/AuthProvider';
+import { useActiveBusiness } from '@/components/ActiveBusinessProvider';
 import { Button } from '@/components/ui/Button';
 import { StatusChip } from '@/components/ui/StatusChip';
 import { TimeRequestButtons } from '@/components/TimeRequestButtons';
@@ -28,9 +29,10 @@ interface Booking {
 
 function CalendarContent() {
   const { user, loading } = useAuth();
+  const { active, loaded: businessesLoaded } = useActiveBusiness();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const businessId = searchParams.get('business');
+  const businessId = searchParams.get('business') || active?.id || null;
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [business, setBusiness] = useState<{ id: string; name: string; slug: string } | null>(null);
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -43,28 +45,25 @@ function CalendarContent() {
   }, [user, loading, router]);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || !businessesLoaded) return;
+    if (active?.id && searchParams.get('business') !== active.id) {
+      router.replace(`/owner/calendar?business=${active.id}`);
+    }
+  }, [active?.id, businessesLoaded, router, searchParams, user]);
 
+  useEffect(() => {
+    if (!user || !businessId) return;
     fetch('/api/businesses')
       .then((r) => r.json())
       .then((d) => {
         const businesses = (d.businesses || []) as Array<{ id: string; name: string; slug: string }>;
-        const biz = businessId
-          ? businesses.find((item) => item.id === businessId)
-          : businesses[0];
-
-        if (biz) {
-          setBusiness(biz);
-          if (!businessId) {
-            router.replace(`/owner/calendar?business=${biz.id}`);
-          }
-        }
+        const biz = businesses.find((item) => item.id === businessId);
+        if (biz) setBusiness(biz);
       });
-  }, [businessId, router, user]);
+  }, [businessId, user]);
 
   useEffect(() => {
     if (!businessId) return;
-
     fetch(`/api/bookings?businessId=${businessId}&role=owner`)
       .then((r) => r.json())
       .then((d) => setBookings(d.bookings || []));
@@ -105,7 +104,7 @@ function CalendarContent() {
   if (loading || !user) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
 
   return (
-    <div className="min-h-screen pb-24">
+    <div className="min-h-screen pb-32">
       <header className="bg-white border-b px-4 py-3 flex items-center gap-3">
         <Link href="/owner"><ArrowLeft size={20} /></Link>
         <div className="flex-1">

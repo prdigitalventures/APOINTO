@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireSession } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { allocateUniqueCode, ensureBusinessCode } from '@/lib/business-code';
 
 export async function GET() {
   const session = await requireSession();
@@ -9,11 +10,27 @@ export async function GET() {
     include: {
       services: { where: { isActive: true } },
       staff: { where: { isActive: true } },
+      ownerUser: { select: { phone: true, name: true } },
       _count: { select: { bookings: true } },
     },
     orderBy: { createdAt: 'desc' },
   });
-  return NextResponse.json({ businesses });
+
+  const withCodes = await Promise.all(
+    businesses.map(async (biz) => {
+      const uniqueCode = await ensureBusinessCode(biz);
+      const contactPhone = biz.contactPhone || biz.ownerUser.phone;
+      if (!biz.contactPhone) {
+        await prisma.business.update({
+          where: { id: biz.id },
+          data: { contactPhone },
+        });
+      }
+      return { ...biz, uniqueCode, contactPhone };
+    })
+  );
+
+  return NextResponse.json({ businesses: withCodes });
 }
 
 export async function POST(req: NextRequest) {
@@ -28,6 +45,7 @@ export async function POST(req: NextRequest) {
     if (existing) slug = `${slug}${Date.now().toString(36)}`;
 
     const schema = getBookingSchema(data.category || 'beauty');
+    const uniqueCode = await allocateUniqueCode();
 
     const business = await prisma.business.create({
       data: {
@@ -39,6 +57,8 @@ export async function POST(req: NextRequest) {
         description: data.description,
         about: data.about,
         bookingSchema: JSON.stringify(schema),
+        uniqueCode,
+        contactPhone: data.contactPhone || session.phone,
       },
     });
 
@@ -47,3 +67,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: (error as Error).message }, { status: 400 });
   }
 }
+

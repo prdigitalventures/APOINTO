@@ -572,6 +572,7 @@ function formatTime12(time: string): string {
 export async function createBusinessFromOnboarding(userId: string, state: OnboardingState) {
   const { prisma } = await import('./db');
   const { getBookingSchema } = await import('./booking-schema');
+  const { allocateUniqueCode } = await import('./business-code');
 
   let slug = slugify(state.businessName || 'business');
   const existing = await prisma.business.findUnique({ where: { slug } });
@@ -579,6 +580,9 @@ export async function createBusinessFromOnboarding(userId: string, state: Onboar
 
   const category = state.category || 'beauty';
   const schema = getBookingSchema(category);
+  const uniqueCode = await allocateUniqueCode();
+
+  const owner = await prisma.user.findUnique({ where: { id: userId }, select: { phone: true } });
 
   const business = await prisma.business.create({
     data: {
@@ -592,6 +596,8 @@ export async function createBusinessFromOnboarding(userId: string, state: Onboar
       advanceBookingDays: state.advanceBookingDays || 30,
       cancellationHours: state.cancellationHours || 2,
       bufferMinutes: state.bufferMinutes || 0,
+      uniqueCode,
+      contactPhone: owner?.phone,
     },
   });
 
