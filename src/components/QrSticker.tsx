@@ -146,20 +146,45 @@ function wrapText(
   if (line) ctx.fillText(line, x, yy);
 }
 
-export function FavoriteButton({ slug }: { slug: string }) {
+export function FavoriteButton({
+  slug,
+  appearance = 'button',
+}: {
+  slug: string;
+  appearance?: 'button' | 'pill';
+}) {
   const [on, setOn] = useState(false);
   useEffect(() => {
     setOn(readFavoriteSlugs().includes(slug));
   }, [slug]);
 
+  const toggle = () => {
+    const next = toggleFavoriteSlug(slug);
+    setOn(next.includes(slug));
+  };
+
+  if (appearance === 'pill') {
+    return (
+      <button
+        type="button"
+        onClick={toggle}
+        className={`inline-flex shrink-0 items-center gap-1 rounded-full border px-3 py-2 text-sm ${
+          on
+            ? 'border-indigo-500 bg-indigo-50 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-200'
+            : 'bg-white dark:bg-[#16181d]'
+        }`}
+      >
+        <Bookmark size={14} />
+        {on ? 'Saved' : 'Save'}
+      </button>
+    );
+  }
+
   return (
     <Button
       variant={on ? 'primary' : 'outline'}
       size="sm"
-      onClick={() => {
-        const next = toggleFavoriteSlug(slug);
-        setOn(next.includes(slug));
-      }}
+      onClick={toggle}
     >
       <Bookmark size={16} className="mr-1" />
       {on ? 'Saved' : 'Make favourite'}

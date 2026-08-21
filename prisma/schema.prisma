@@ -57,6 +57,7 @@ model Business {
   cancellationHours  Int      @default(2)
   bufferMinutes      Int      @default(0)
   isActive           Boolean  @default(true)
+  googleBookLinkedAt DateTime?
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 

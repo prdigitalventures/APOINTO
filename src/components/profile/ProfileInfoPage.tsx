@@ -59,6 +59,11 @@ function HowTo({ role }: { role: 'OWNER' | 'CUSTOMER' }) {
         <li>Add services, prices, staff, and hours. Share the booking link or QR from Home.</li>
         <li>Use Calendar for the day, Alerts for new bookings, and CRM for customer history.</li>
         <li>Update shop photo and address in Profile → Business details so customers recognise you.</li>
+        <li>
+          To add Book on Google Maps: Profile → Business details → Add Book on Google. Copy the Apointo booking URL and
+          paste it as the Website or Appointment / Book online link on Google Business Profile. Call stays your phone;
+          Book opens Apointo.
+        </li>
       </ol>
     );
   }
@@ -79,6 +84,10 @@ function Faqs({ role }: { role: 'OWNER' | 'CUSTOMER' }) {
           ['Is the basic plan really free?', 'Yes. You can go live with a booking page, calendar, and AI setup at no charge.'],
           ['Can I manage bookings from home?', 'Yes. Calendar, alerts, and CRM work from your phone.'],
           ['How do customers find me?', 'Share your Apointo link or QR. They can also search when they are nearby.'],
+          [
+            'Can I add a Book button on Google?',
+            'Yes. Open Business details → Add Book on Google, copy the booking URL, and paste it as Website or Appointment / Book online in Google Business Profile. Apointo is not a Reserve with Google partner, so Google cannot inject a native chip for us automatically.',
+          ],
           ['Google login not working?', 'Add your Google account as a test user on the OAuth consent screen, or use phone/email login.'],
           ['Where do I add a shop photo?', 'Profile → Business details → Upload business photo.'],
         ]

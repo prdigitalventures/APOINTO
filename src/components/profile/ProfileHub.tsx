@@ -96,7 +96,7 @@ export function ProfileHub({ expectedRole }: { expectedRole: 'OWNER' | 'CUSTOMER
     account.push({
       href: `${base}/business`,
       label: 'Business details',
-      hint: 'Complete listing, shop photo, location',
+      hint: 'Listing, QR sticker, Google Book button',
       icon: Building2,
     });
   }

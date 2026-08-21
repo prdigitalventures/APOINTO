@@ -13,6 +13,7 @@ export interface OwnerBusiness {
   logo: string | null;
   uniqueCode: string | null;
   contactPhone: string | null;
+  googleBookLinkedAt?: string | null;
   _count?: { bookings: number };
 }
 

@@ -24,6 +24,7 @@ type Step = 'service' | 'staff' | 'date' | 'time' | 'details' | 'confirm' | 'don
 
 export default function BookingFlow({ params }: { params: { slug: string } }) {
   const [business, setBusiness] = useState<Business | null>(null);
+  const [fromGoogle, setFromGoogle] = useState(false);
   const [step, setStep] = useState<Step>('service');
   const [selectedService, setSelectedService] = useState<string>('');
   const [selectedStaff, setSelectedStaff] = useState<string>('');
@@ -36,6 +37,11 @@ export default function BookingFlow({ params }: { params: { slug: string } }) {
   const [bookingId, setBookingId] = useState('');
   const [error, setError] = useState('');
   const { user } = useAuth();
+
+  useEffect(() => {
+    const query = new URLSearchParams(window.location.search);
+    setFromGoogle(query.get('src') === 'google');
+  }, []);
 
   useEffect(() => {
     if (user?.name && !customerName) setCustomerName(user.name);
@@ -151,6 +157,11 @@ export default function BookingFlow({ params }: { params: { slug: string } }) {
       </header>
 
       <div className="flex-1 p-4 max-w-lg mx-auto w-full">
+        {fromGoogle && step === 'service' ? (
+          <p className="mb-4 rounded-xl bg-indigo-50 px-3 py-2 text-sm text-indigo-800 dark:bg-indigo-950/50 dark:text-indigo-200">
+            Booked from Google — pick a service to continue on Apointo.
+          </p>
+        ) : null}
         {step === 'service' && (
           <div className="space-y-3">
             <h2 className="font-semibold text-lg mb-4">Choose a service</h2>

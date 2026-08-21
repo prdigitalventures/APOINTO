@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import QRCode from 'qrcode';
 import { Copy, Check, MessageCircle } from 'lucide-react';
 import { Button } from './ui/Button';
+import { canonicalBookingUrl, clientOrigin } from '@/lib/booking-url';
 
 interface ShareLinkProps {
   slug: string;
@@ -15,8 +16,7 @@ export function ShareLink({ slug, businessName }: ShareLinkProps) {
   const [copied, setCopied] = useState(false);
   const [copiedQr, setCopiedQr] = useState(false);
 
-  const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
-  const bookingUrl = `${baseUrl}/${slug}`;
+  const bookingUrl = canonicalBookingUrl(slug, clientOrigin());
 
   useEffect(() => {
     QRCode.toDataURL(bookingUrl, { width: 200, margin: 2 }).then(setQrDataUrl);

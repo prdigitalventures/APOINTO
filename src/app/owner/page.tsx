@@ -114,6 +114,12 @@ export default function OwnerDashboard() {
                 <Button variant="outline" className="w-full" size="sm">Public profile</Button>
               </Link>
             </div>
+            <Link
+              href="/owner/profile/business#google-book"
+              className="mt-3 block text-sm font-medium text-indigo-700 dark:text-indigo-300"
+            >
+              Add Book on Google for this shop
+            </Link>
           </section>
         ) : null}
 

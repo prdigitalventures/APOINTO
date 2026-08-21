@@ -11,6 +11,7 @@ import { useActiveBusiness } from '@/components/ActiveBusinessProvider';
 import { ProfileSubpage } from '@/components/profile/ProfileSubpage';
 import { compressImage } from '@/components/profile/compressImage';
 import { QrSticker } from '@/components/QrSticker';
+import { GoogleBookConnect } from '@/components/profile/GoogleBookConnect';
 import { formatBusinessCode, googleMapsSearchUrl } from '@/lib/place';
 
 interface Business {
@@ -24,6 +25,7 @@ interface Business {
   logo: string | null;
   uniqueCode?: string | null;
   contactPhone?: string | null;
+  googleBookLinkedAt?: string | null;
 }
 
 export function BusinessDetailsForm() {
@@ -60,6 +62,7 @@ export function BusinessDetailsForm() {
       logo: active.logo,
       uniqueCode: active.uniqueCode,
       contactPhone: active.contactPhone,
+      googleBookLinkedAt: active.googleBookLinkedAt || null,
     });
   }, [active]);
 
@@ -114,7 +117,7 @@ export function BusinessDetailsForm() {
   return (
     <ProfileSubpage
       title="Business details"
-      subtitle="Photo, address, Maps link, and QR sticker"
+      subtitle="Photo, address, QR sticker, and Google Book"
       backHref="/owner/profile"
     >
       {businesses.length > 1 ? (
@@ -211,6 +214,23 @@ export function BusinessDetailsForm() {
         </Button>
         <p className="mt-3 text-center text-xs text-gray-500">Public page: /{business.slug}</p>
       </div>
+
+      <GoogleBookConnect
+        slug={business.slug}
+        businessName={business.name}
+        linkedAt={business.googleBookLinkedAt || null}
+        onLinkedChange={async (linkedAt) => {
+          const res = await fetch(`/api/owner/businesses/${business.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ googleBookLinkedAt: linkedAt }),
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || 'Could not save');
+          setBusiness({ ...business, googleBookLinkedAt: data.business.googleBookLinkedAt || null });
+          await refresh();
+        }}
+      />
 
       <div className="rounded-2xl border border-gray-100 bg-white p-5 dark:border-gray-800 dark:bg-[#16181d]">
         <h2 className="mb-3 text-sm font-semibold">QR sticker</h2>

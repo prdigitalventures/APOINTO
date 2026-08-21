@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
 import { formatCurrency, formatTime12h, DAYS } from '@/lib/utils';
-import { Clock, MapPin, Navigation, Phone, Share2 } from 'lucide-react';
+import { CalendarCheck, Clock, MapPin, Navigation, Phone, Share2 } from 'lucide-react';
 import type { BusinessBookingSchema } from '@/lib/booking-schema';
 import { getCategoryDisplayName } from '@/lib/booking-schema';
 import { formatBusinessCode, googleMapsSearchUrl } from '@/lib/place';
@@ -123,6 +123,12 @@ export default function BusinessPage({ params }: { params: { slug: string } }) {
         {tab === 'overview' ? (
           <>
             <div className="flex gap-2 overflow-x-auto pb-1">
+              <Link
+                href={`/${business.slug}/book`}
+                className="inline-flex shrink-0 items-center gap-1 rounded-full bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm"
+              >
+                <CalendarCheck size={14} /> Book
+              </Link>
               {mapsUrl ? (
                 <a
                   href={mapsUrl}
@@ -133,7 +139,7 @@ export default function BusinessPage({ params }: { params: { slug: string } }) {
                   <Navigation size={14} /> Directions
                 </a>
               ) : null}
-              <FavoriteButton slug={business.slug} />
+              <FavoriteButton slug={business.slug} appearance="pill" />
               <button
                 type="button"
                 onClick={share}
