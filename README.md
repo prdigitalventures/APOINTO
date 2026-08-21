@@ -86,3 +86,27 @@ Customer accounts must use a unique email and phone. Booking is blocked until th
 Build runs `prisma migrate deploy` and seeds demo accounts.
 
 SQLite is **not** used on Vercel: each serverless instance has its own ephemeral filesystem, so bookings would not persist. Use Postgres instead.
+
+## Vite/Express workspace
+
+The repository also contains the base branch's standalone workspace:
+
+- **API**: Express + SQLite (`server/`)
+- **Web**: React + Vite (`frontend/`)
+- **Package manager**: pnpm workspaces
+
+To run it locally:
+
+```bash
+corepack enable
+pnpm install
+pnpm db:prepare
+pnpm workspace:dev
+```
+
+- API: http://localhost:3001
+- Web: http://localhost:5173
+
+Workspace commands are `pnpm workspace:dev`, `pnpm workspace:build`, `pnpm workspace:test`, and `pnpm db:prepare`.
+
+Repository-managed environment configuration lives in `.cursor/environment.json`. Install prepares dependencies and the SQLite database; `api` and `web` terminals start the development servers.

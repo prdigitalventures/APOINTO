@@ -1,0 +1,25 @@
+{
+  "name": "APOINTO",
+  "install": "./scripts/cloud-agent-install.sh",
+  "start": "./scripts/cloud-agent-start.sh",
+  "terminals": [
+    {
+      "name": "api",
+      "command": "pnpm --filter @apointo/server dev"
+    },
+    {
+      "name": "web",
+      "command": "pnpm --filter @apointo/frontend dev"
+    }
+  ],
+  "ports": [
+    {
+      "name": "APOINTO API",
+      "port": 3001
+    },
+    {
+      "name": "APOINTO Web",
+      "port": 5173
+    }
+  ]
+}

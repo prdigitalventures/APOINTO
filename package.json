@@ -2,6 +2,8 @@
   "name": "apointo",
   "version": "0.1.0",
   "private": true,
+  "description": "Universal AI-Powered Booking Platform for Indian SMBs",
+  "packageManager": "pnpm@9.15.4",
   "scripts": {
     "dev": "next dev",
     "build": "prisma generate && next build",
@@ -10,6 +12,10 @@
     "db:migrate": "prisma migrate dev",
     "db:seed": "npx tsx prisma/seed.ts",
     "seed": "npx tsx prisma/seed.ts",
+    "workspace:dev": "pnpm --parallel --filter @apointo/server --filter @apointo/frontend run dev",
+    "workspace:build": "pnpm --filter @apointo/server --filter @apointo/frontend run build",
+    "workspace:test": "pnpm --filter @apointo/server --filter @apointo/frontend run test",
+    "db:prepare": "pnpm --filter @apointo/server db:prepare",
     "postinstall": "prisma generate"
   },
   "prisma": {
