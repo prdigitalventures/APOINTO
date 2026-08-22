@@ -2,10 +2,7 @@ import { prisma } from './db';
 import { allocateUniqueCode } from './business-code';
 import { getBookingSchema } from './booking-schema';
 import { slugify } from './utils';
-import { hashPassword, issuePasswordResetForUser } from './auth';
-import { normalizeEmail, normalizePhone, createSecretToken } from './identity';
-import { sendShopAssignedEmail } from './email';
-import { uniquePlaceholderPhone } from './admin';
+import { normalizeEmail } from './identity';
 
 export async function createBusinessForOwner(input: {
   name: string;
@@ -14,39 +11,18 @@ export async function createBusinessForOwner(input: {
   description?: string;
   about?: string;
   ownerEmail: string;
-  ownerName?: string;
-  ownerPhone?: string;
 }) {
   const name = input.name.trim();
   if (!name) throw new Error('Business name is required');
   const ownerEmail = normalizeEmail(input.ownerEmail);
   if (!ownerEmail) throw new Error('Owner email is required');
 
-  let owner = await prisma.user.findUnique({ where: { email: ownerEmail } });
-  let invited = false;
+  const owner = await prisma.user.findUnique({ where: { email: ownerEmail } });
   if (!owner) {
-    const phone = input.ownerPhone ? normalizePhone(input.ownerPhone) : await uniquePlaceholderPhone();
-    if (input.ownerPhone) {
-      const taken = await prisma.user.findUnique({ where: { phone } });
-      if (taken) throw new Error('That phone number is already registered');
-    }
-    owner = await prisma.user.create({
-      data: {
-        name: (input.ownerName || name).trim(),
-        email: ownerEmail,
-        phone,
-        password: await hashPassword(createSecretToken()),
-        role: 'OWNER',
-        emailVerifiedAt: new Date(),
-      },
-    });
-    invited = true;
-    await issuePasswordResetForUser(owner);
-  } else if (owner.role === 'CUSTOMER') {
-    owner = await prisma.user.update({
-      where: { id: owner.id },
-      data: { role: 'OWNER' },
-    });
+    throw new Error('Create the owner on Accounts first, then assign this shop to their email.');
+  }
+  if (owner.role === 'CUSTOMER') {
+    await prisma.user.update({ where: { id: owner.id }, data: { role: 'OWNER' } });
   }
 
   let slug = slugify(name) || 'business';
@@ -72,13 +48,7 @@ export async function createBusinessForOwner(input: {
     },
   });
 
-  const mail = await sendShopAssignedEmail(ownerEmail, {
-    ownerName: owner.name,
-    businessName: name,
-    slug,
-  });
-
-  return { business, owner, invited, emailSent: mail.sent };
+  return { business, owner, emailSent: false };
 }
 
 export async function setBusinessActive(id: string, isActive: boolean, reason?: string) {

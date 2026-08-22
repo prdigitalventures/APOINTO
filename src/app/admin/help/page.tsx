@@ -9,8 +9,12 @@ export default function AdminHelpPage() {
       body: 'CRM lists every owner and customer who created an Apointo account. Open a contact to add notes and tags. This is not the same as a shop owner’s CRM of walk-in clients.',
     },
     {
+      title: 'Create owners and customers',
+      body: 'Accounts → create the person first (no email is sent yet). Reset or generate a password, then click Send credentials so they get login email, password, and a “your account is created” message. Edit lets you change name, email, and phone.',
+    },
+    {
       title: 'Create and assign a business',
-      body: 'Businesses → fill name, category, location, and the owner’s registered email. If they already have an account they can log in at /owner. If they are new, they get an email to set a password.',
+      body: 'Create the owner on Accounts first. Businesses → create the shop with that owner email (no email yet). Click Email owner when you want to send the shop-ready message. Live shops show a green Live pill; disabled shops show a red Not live pill.',
     },
     {
       title: 'Disable malpractice or duplicates',
@@ -18,7 +22,7 @@ export default function AdminHelpPage() {
     },
     {
       title: 'Password reset',
-      body: 'Accounts → Send reset emails a link to /reset-password. Never share a password in chat.',
+      body: 'Send credentials emails a temporary password. Reset link emails /reset-password instead. Copy the password from the yellow banner if email is not configured.',
     },
     {
       title: 'Campaigns',

@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db';
 import { adminError, requirePermission, writeAudit } from '@/lib/admin';
 import { setBusinessActive } from '@/lib/admin-business';
 import { normalizeEmail } from '@/lib/identity';
+import { sendShopAssignedEmail } from '@/lib/email';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,6 +14,28 @@ export async function PATCH(
   try {
     const staff = await requirePermission('businesses', 'EDIT');
     const body = await req.json();
+
+    if (body.action === 'notify') {
+      const business = await prisma.business.findUnique({
+        where: { id: params.id },
+        include: { ownerUser: true },
+      });
+      if (!business?.ownerUser.email) {
+        return NextResponse.json({ error: 'Owner has no email' }, { status: 400 });
+      }
+      const mail = await sendShopAssignedEmail(business.ownerUser.email, {
+        ownerName: business.ownerUser.name,
+        businessName: business.name,
+        slug: business.slug,
+      });
+      await writeAudit({
+        actorId: staff.session.id,
+        action: 'business.notify',
+        targetType: 'business',
+        targetId: params.id,
+      });
+      return NextResponse.json({ emailSent: mail.sent });
+    }
 
     if (typeof body.isActive === 'boolean') {
       const business = await setBusinessActive(params.id, body.isActive, body.reason);
@@ -26,23 +49,33 @@ export async function PATCH(
       return NextResponse.json({ business });
     }
 
-    if (body.ownerEmail) {
-      const email = normalizeEmail(body.ownerEmail);
-      const owner = await prisma.user.findUnique({ where: { email } });
-      if (!owner) return NextResponse.json({ error: 'No user with that email. Create them first or include them when creating the shop.' }, { status: 400 });
-      if (owner.role === 'CUSTOMER') {
-        await prisma.user.update({ where: { id: owner.id }, data: { role: 'OWNER' } });
+    if (body.name || body.location || body.description || body.ownerEmail) {
+      let ownerId: string | undefined;
+      if (body.ownerEmail) {
+        const email = normalizeEmail(body.ownerEmail);
+        const owner = await prisma.user.findUnique({ where: { email } });
+        if (!owner) {
+          return NextResponse.json({ error: 'No user with that email. Create them on Accounts first.' }, { status: 400 });
+        }
+        if (owner.role === 'CUSTOMER') {
+          await prisma.user.update({ where: { id: owner.id }, data: { role: 'OWNER' } });
+        }
+        ownerId = owner.id;
       }
       const business = await prisma.business.update({
         where: { id: params.id },
-        data: { ownerId: owner.id },
+        data: {
+          ...(typeof body.name === 'string' && body.name.trim() ? { name: body.name.trim() } : {}),
+          ...(typeof body.location === 'string' ? { location: body.location.trim() || null } : {}),
+          ...(typeof body.description === 'string' ? { description: body.description.trim() || null } : {}),
+          ...(ownerId ? { ownerId } : {}),
+        },
       });
       await writeAudit({
         actorId: staff.session.id,
-        action: 'business.assign',
+        action: 'business.edit',
         targetType: 'business',
         targetId: params.id,
-        metadata: { ownerEmail: email },
       });
       return NextResponse.json({ business });
     }

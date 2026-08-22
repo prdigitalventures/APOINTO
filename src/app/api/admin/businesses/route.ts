@@ -50,8 +50,6 @@ export async function POST(req: NextRequest) {
       description: body.description,
       about: body.about,
       ownerEmail: body.ownerEmail,
-      ownerName: body.ownerName,
-      ownerPhone: body.ownerPhone,
     });
 
     await writeAudit({
@@ -59,7 +57,7 @@ export async function POST(req: NextRequest) {
       action: 'business.create',
       targetType: 'business',
       targetId: result.business.id,
-      metadata: { ownerEmail: body.ownerEmail, invited: result.invited },
+      metadata: { ownerEmail: body.ownerEmail },
     });
 
     return NextResponse.json(result);

@@ -115,6 +115,21 @@ export async function sendShopAssignedEmail(
   });
 }
 
+export async function sendAccountCreatedEmail(
+  to: string,
+  opts: { name: string; email: string; password: string; role: string }
+) {
+  const loginUrl =
+    opts.role === 'OWNER' ? `${appBaseUrl()}/login?role=owner` : `${appBaseUrl()}/login`;
+  const roleLabel = opts.role === 'OWNER' ? 'business owner' : 'customer';
+  return sendEmail({
+    to,
+    subject: 'Your Apointo account is ready',
+    text: `Hi ${opts.name}, your Apointo ${roleLabel} account is created.\nLogin: ${loginUrl}\nEmail: ${opts.email}\nTemporary password: ${opts.password}\nPlease log in and change this password.`,
+    html: `<p>Hi ${opts.name},</p><p>Your Apointo <strong>${roleLabel}</strong> account is created.</p><p><a href="${loginUrl}">Log in</a></p><p>Email: <strong>${opts.email}</strong><br/>Temporary password: <strong>${opts.password}</strong></p><p>Please log in and change this password after you sign in.</p>`,
+  });
+}
+
 export async function sendStaffInviteEmail(to: string, opts: { name: string; resetUrl: string }) {
   return sendEmail({
     to,
