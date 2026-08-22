@@ -7,12 +7,13 @@ interface User {
   name: string;
   phone: string;
   email?: string | null;
-  role: 'OWNER' | 'CUSTOMER';
+  role: 'OWNER' | 'CUSTOMER' | 'ADMIN' | 'STAFF';
   emailVerified?: boolean;
   avatar?: string | null;
   rewardPoints?: number;
   referralCode?: string;
   referralLink?: string;
+  isStaff?: boolean;
 }
 
 interface AuthContextType {

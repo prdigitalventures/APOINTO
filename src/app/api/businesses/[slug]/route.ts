@@ -21,6 +21,7 @@ export async function GET(
   });
 
   if (!business) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  if (!business.isActive) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
   const uniqueCode = await ensureBusinessCode(business);
   const contactPhone = business.contactPhone || business.ownerUser.phone;

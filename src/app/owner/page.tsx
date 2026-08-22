@@ -88,6 +88,11 @@ export default function OwnerDashboard() {
       </header>
 
       <main className="max-w-lg mx-auto px-4 py-6 space-y-6">
+        {active && active.isActive === false ? (
+          <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200">
+            This listing is disabled by Apointo{active.disabledReason ? `: ${active.disabledReason}` : ''}. New public bookings are paused.
+          </div>
+        ) : null}
         {active ? (
           <section className="rounded-2xl border border-indigo-100 bg-indigo-50 p-4 dark:border-indigo-900 dark:bg-indigo-950/40">
             <p className="text-xs font-medium uppercase tracking-wide text-indigo-700">Active shop</p>

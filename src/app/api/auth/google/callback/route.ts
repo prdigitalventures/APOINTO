@@ -5,8 +5,8 @@ import { setSessionCookie, toSessionUser, upsertGoogleUser, type UserRole } from
 import { appBaseUrl, googleRedirectUri } from '@/lib/app-url';
 import {
   authDestination,
-  authenticatedDestination,
   parseAuthIntentRole,
+  postLoginPath,
 } from '@/lib/auth-intent';
 
 export const dynamic = 'force-dynamic';
@@ -139,7 +139,18 @@ export async function GET(req: NextRequest) {
     }
 
     await setSessionCookie(toSessionUser(result.user));
-    const dest = authenticatedDestination(next, role, result.user.role as UserRole);
+    let isStaff = result.user.role === 'ADMIN' || result.user.role === 'STAFF';
+    try {
+      const { resolvePermissions } = await import('@/lib/admin');
+      isStaff = (await resolvePermissions(result.user.id)).isStaff;
+    } catch {
+      /* admin tables may not exist yet */
+    }
+    const dest = postLoginPath({
+      role: result.user.role,
+      isStaff,
+      next,
+    });
     return NextResponse.redirect(new URL(dest, appBaseUrl()));
   } catch (error) {
     return loginError((error as Error).message, role, entry);

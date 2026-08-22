@@ -35,3 +35,15 @@ export function authenticatedDestination(
   if (accountRole === 'OWNER') return '/owner';
   return authDestination(value, intentRole);
 }
+
+export function postLoginPath(opts: { role: string; isStaff?: boolean; next?: string | null }) {
+  if (opts.isStaff || opts.role === 'ADMIN' || opts.role === 'STAFF') {
+    const path = safeInternalPath(opts.next);
+    if (path && (path === '/admin' || path.startsWith('/admin/'))) return path;
+    return '/admin';
+  }
+  if (opts.role === 'OWNER') {
+    return authDestination(opts.next, 'OWNER');
+  }
+  return authDestination(opts.next, 'CUSTOMER');
+}

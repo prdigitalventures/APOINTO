@@ -100,6 +100,14 @@ export function ProfileHub({ expectedRole }: { expectedRole: 'OWNER' | 'CUSTOMER
       icon: Building2,
     });
   }
+  if (user.isStaff) {
+    account.push({
+      href: '/admin',
+      label: 'Apointo admin',
+      hint: 'Team dashboard for businesses, CRM, and accounts',
+      icon: Shield,
+    });
+  }
 
   const app: Item[] = [
     { href: `${base}/settings`, label: 'Settings', hint: 'Notifications and appearance', icon: Settings },

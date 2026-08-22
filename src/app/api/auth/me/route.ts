@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession, requireSession, toSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/db';
-import { appOrigin, makeReferralCode } from '@/lib/referral';
+import { resolvePermissions } from '@/lib/admin';
 
 export const dynamic = 'force-dynamic';
 
@@ -64,7 +64,15 @@ export async function GET() {
     }
   }
 
-  return NextResponse.json({ user: present(user) });
+  let isStaff = false;
+  try {
+    const staff = await resolvePermissions(user.id);
+    isStaff = staff.isStaff;
+  } catch {
+    isStaff = session.role === 'ADMIN' || session.role === 'STAFF';
+  }
+
+  return NextResponse.json({ user: { ...present(user), isStaff } });
 }
 
 export async function PATCH(req: NextRequest) {

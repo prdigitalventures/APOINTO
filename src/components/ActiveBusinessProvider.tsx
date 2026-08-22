@@ -14,6 +14,8 @@ export interface OwnerBusiness {
   uniqueCode: string | null;
   contactPhone: string | null;
   googleBookLinkedAt?: string | null;
+  isActive?: boolean;
+  disabledReason?: string | null;
   _count?: { bookings: number };
 }
 

@@ -84,7 +84,7 @@ export default function HomePage() {
 
   useEffect(() => {
     if (!loading && user) {
-      router.push(user.role === 'OWNER' ? '/owner' : '/customer');
+      router.push(user.isStaff || user.role === 'ADMIN' || user.role === 'STAFF' ? '/admin' : user.role === 'OWNER' ? '/owner' : '/customer');
     }
   }, [user, loading, router]);
 

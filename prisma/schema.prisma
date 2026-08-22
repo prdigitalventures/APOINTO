@@ -25,15 +25,25 @@ model User {
   avatar                   String?
   rewardPoints             Int       @default(0)
   referralCode             String?   @unique
+  isActive                 Boolean   @default(true)
+  disabledReason           String?
+  lastLoginAt              DateTime?
   createdAt                DateTime  @default(now())
   updatedAt                DateTime  @updatedAt
 
-  businesses         Business[]
-  bookings           Booking[]           @relation("CustomerBookings")
-  notifications      Notification[]
-  onboardingSessions OnboardingSession[]
-  feedback           Feedback[]
-  crmContacts        CrmContact[]
+  businesses           Business[]
+  bookings             Booking[]           @relation("CustomerBookings")
+  notifications        Notification[]
+  onboardingSessions   OnboardingSession[]
+  feedback             Feedback[]
+  crmContacts          CrmContact[]
+  staffProfile         StaffProfile?
+  staffRole            Role?               @relation(fields: [staffRoleId], references: [id])
+  staffRoleId          String?
+  permissionOverrides  StaffPermissionOverride[]
+  platformContact      PlatformContact?
+  campaignsCreated     Campaign[]
+  audits               AdminAudit[]        @relation("AuditActor")
 }
 
 model Business {
@@ -57,6 +67,7 @@ model Business {
   cancellationHours  Int      @default(2)
   bufferMinutes      Int      @default(0)
   isActive           Boolean  @default(true)
+  disabledReason     String?
   googleBookLinkedAt DateTime?
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
@@ -272,4 +283,89 @@ model CrmContact {
 
   @@unique([ownerId, phone])
   @@index([ownerId])
+}
+
+model StaffProfile {
+  id         String  @id @default(cuid())
+  userId     String  @unique
+  department String  @default("OPS")
+  isActive   Boolean @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Role {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  isSystem    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  permissions RolePermission[]
+  users       User[]
+}
+
+model RolePermission {
+  id      String @id @default(cuid())
+  roleId  String
+  feature String
+  level   String @default("NONE")
+
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, feature])
+}
+
+model StaffPermissionOverride {
+  id      String @id @default(cuid())
+  userId  String
+  feature String
+  level   String
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, feature])
+}
+
+model PlatformContact {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  notes     String?
+  tags      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Campaign {
+  id             String    @id @default(cuid())
+  name           String
+  subject        String
+  body           String
+  audience       String    @default("ALL")
+  status         String    @default("DRAFT")
+  recipientCount Int       @default(0)
+  sentAt         DateTime?
+  createdById    String
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  createdBy User @relation(fields: [createdById], references: [id], onDelete: Cascade)
+}
+
+model AdminAudit {
+  id         String   @id @default(cuid())
+  actorId    String
+  action     String
+  targetType String
+  targetId   String?
+  metadata   String?
+  createdAt  DateTime @default(now())
+
+  actor User @relation("AuditActor", fields: [actorId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
 }

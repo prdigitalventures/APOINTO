@@ -23,6 +23,15 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    const shop = await prisma.business.findUnique({
+      where: { id: businessId },
+      select: { isActive: true },
+    });
+    if (!shop) return NextResponse.json({ error: 'Business not found' }, { status: 404 });
+    if (!shop.isActive && !isWalkIn) {
+      return NextResponse.json({ error: 'This business is not accepting bookings right now.' }, { status: 403 });
+    }
+
     const available = await isSlotAvailable({
       businessId,
       serviceId,

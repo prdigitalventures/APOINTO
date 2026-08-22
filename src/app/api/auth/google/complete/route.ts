@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { jwtVerify } from 'jose';
 import { setSessionCookie, toSessionUser, upsertGoogleUser, type UserRole } from '@/lib/auth';
-import { authenticatedDestination } from '@/lib/auth-intent';
+import { postLoginPath } from '@/lib/auth-intent';
 
 export const dynamic = 'force-dynamic';
 
@@ -59,8 +59,15 @@ export async function POST(req: NextRequest) {
     cookieStore.delete('google_pending');
     const session = toSessionUser(result.user);
     await setSessionCookie(session);
+    let isStaff = session.role === 'ADMIN' || session.role === 'STAFF';
+    try {
+      const { resolvePermissions } = await import('@/lib/admin');
+      isStaff = (await resolvePermissions(session.id)).isStaff;
+    } catch {
+      /* ignore */
+    }
     return NextResponse.json({
-      next: authenticatedDestination(next, role, session.role),
+      next: postLoginPath({ role: session.role, isStaff, next }),
       user: {
         id: session.id,
         name: session.name,

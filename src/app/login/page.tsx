@@ -19,6 +19,7 @@ function LoginForm() {
   const [loading, setLoading] = useState(false);
   const role = parseAuthIntentRole(searchParams.get('role'));
   const isOwner = role === 'OWNER';
+  const next = searchParams.get('next');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,7 +27,7 @@ function LoginForm() {
     setLoading(true);
     try {
       await login(phone, password);
-      router.push('/');
+      router.push(next && next.startsWith('/') && !next.startsWith('//') ? next : '/');
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -89,6 +90,12 @@ function LoginForm() {
           Don&apos;t have an account?{' '}
           <Link href={`/register?role=${isOwner ? 'owner' : 'customer'}`} className="text-indigo-600 font-medium">
             Sign up
+          </Link>
+        </p>
+        <p className="text-center text-sm text-gray-600 mt-2">
+          Apointo team?{' '}
+          <Link href="/admin" className="text-indigo-600 font-medium">
+            Open admin dashboard
           </Link>
         </p>
       </div>

@@ -11,7 +11,8 @@ import {
   normalizePhone,
 } from './identity';
 
-export type UserRole = 'OWNER' | 'CUSTOMER';
+export type UserRole = 'OWNER' | 'CUSTOMER' | 'ADMIN' | 'STAFF';
+export const ACCOUNT_DISABLED_MESSAGE = 'This account has been disabled. Contact Apointo support.';
 export {
   ALREADY_REGISTERED_MESSAGE,
   createSecretToken,
@@ -83,7 +84,21 @@ export async function getSession(): Promise<SessionUser | null> {
   const cookieStore = await cookies();
   const token = cookieStore.get('session')?.value;
   if (!token) return null;
-  return verifyToken(token);
+  const session = await verifyToken(token);
+  if (!session) return null;
+  const live = await prisma.user.findUnique({
+    where: { id: session.id },
+    select: { isActive: true, role: true, name: true, phone: true, email: true, emailVerifiedAt: true },
+  });
+  if (!live || live.isActive === false) return null;
+  return {
+    id: session.id,
+    name: live.name,
+    phone: live.phone,
+    email: live.email,
+    role: live.role as UserRole,
+    emailVerified: Boolean(live.emailVerifiedAt),
+  };
 }
 
 export async function requireSession(): Promise<SessionUser> {
@@ -174,7 +189,7 @@ export async function registerUser(data: {
         name,
         phone,
         password: hashed,
-        role: data.role || 'CUSTOMER',
+        role: data.role === 'OWNER' ? 'OWNER' : 'CUSTOMER',
         email,
       },
     });
@@ -199,6 +214,11 @@ export async function loginUser(identifier: string, password: string) {
   if (!user) throw new Error('Invalid credentials');
   const valid = await verifyPassword(password, user.password);
   if (!valid) throw new Error('Invalid credentials');
+  if (user.isActive === false) throw new Error(ACCOUNT_DISABLED_MESSAGE);
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { lastLoginAt: new Date() },
+  });
   return user;
 }
 
@@ -222,12 +242,7 @@ export async function verifyEmailToken(token: string) {
   });
 }
 
-export async function requestPasswordReset(emailRaw: string) {
-  const email = normalizeEmail(emailRaw);
-  const user = await prisma.user.findUnique({ where: { email } });
-  if (!user) {
-    return { ok: true };
-  }
+export async function issuePasswordResetForUser(user: { id: string; email: string }) {
   const token = createSecretToken();
   await prisma.user.update({
     where: { id: user.id },
@@ -236,8 +251,17 @@ export async function requestPasswordReset(emailRaw: string) {
       passwordResetExpiresAt: new Date(Date.now() + 1000 * 60 * 60),
     },
   });
-  const mail = await sendPasswordResetEmailSafe(email, token);
-  return { ok: true, resetUrl: mail.url, emailSent: mail.sent };
+  const mail = await sendPasswordResetEmailSafe(user.email, token);
+  return { ok: true as const, resetUrl: mail.url, emailSent: mail.sent };
+}
+
+export async function requestPasswordReset(emailRaw: string) {
+  const email = normalizeEmail(emailRaw);
+  const user = await prisma.user.findUnique({ where: { email } });
+  if (!user) {
+    return { ok: true };
+  }
+  return issuePasswordResetForUser(user);
 }
 
 async function sendPasswordResetEmailSafe(email: string, token: string) {
@@ -276,12 +300,15 @@ export async function upsertGoogleUser(profile: {
   const email = normalizeEmail(profile.email);
   const existingByGoogle = await prisma.user.findUnique({ where: { googleId: profile.googleId } });
   if (existingByGoogle) {
+    if (existingByGoogle.isActive === false) throw new Error(ACCOUNT_DISABLED_MESSAGE);
+    const keepStaff = existingByGoogle.role === 'ADMIN' || existingByGoogle.role === 'STAFF';
     const user = await prisma.user.update({
       where: { id: existingByGoogle.id },
       data: {
         email,
         emailVerifiedAt: existingByGoogle.emailVerifiedAt || new Date(),
-        ...(profile.role === 'OWNER' ? { role: 'OWNER' } : {}),
+        lastLoginAt: new Date(),
+        ...(profile.role === 'OWNER' && !keepStaff ? { role: 'OWNER' } : {}),
       },
     });
     return { user, created: false };
@@ -289,12 +316,15 @@ export async function upsertGoogleUser(profile: {
 
   const existingByEmail = await prisma.user.findUnique({ where: { email } });
   if (existingByEmail) {
+    if (existingByEmail.isActive === false) throw new Error(ACCOUNT_DISABLED_MESSAGE);
+    const keepStaff = existingByEmail.role === 'ADMIN' || existingByEmail.role === 'STAFF';
     const user = await prisma.user.update({
       where: { id: existingByEmail.id },
       data: {
         googleId: profile.googleId,
         emailVerifiedAt: new Date(),
-        ...(profile.role === 'OWNER' ? { role: 'OWNER' } : {}),
+        lastLoginAt: new Date(),
+        ...(profile.role === 'OWNER' && !keepStaff ? { role: 'OWNER' } : {}),
       },
     });
     return { user, created: false };

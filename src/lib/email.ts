@@ -99,3 +99,27 @@ export async function sendPasswordResetEmail(to: string, token: string) {
   }
   return { ...result, url };
 }
+
+export async function sendShopAssignedEmail(
+  to: string,
+  opts: { ownerName: string; businessName: string; slug: string }
+) {
+  const loginUrl = `${appBaseUrl()}/login?role=owner`;
+  const dashboardUrl = `${appBaseUrl()}/owner`;
+  const publicUrl = `${appBaseUrl()}/${opts.slug}`;
+  return sendEmail({
+    to,
+    subject: `${opts.businessName} is ready on Apointo`,
+    text: `Hi ${opts.ownerName}, your Apointo booking page for ${opts.businessName} is live: ${publicUrl}. Log in at ${loginUrl} and open ${dashboardUrl}.`,
+    html: `<p>Hi ${opts.ownerName},</p><p>Your Apointo booking page for <strong>${opts.businessName}</strong> is ready.</p><p><a href="${publicUrl}">Public booking page</a></p><p><a href="${loginUrl}">Log in</a> then open your <a href="${dashboardUrl}">owner dashboard</a>.</p>`,
+  });
+}
+
+export async function sendStaffInviteEmail(to: string, opts: { name: string; resetUrl: string }) {
+  return sendEmail({
+    to,
+    subject: 'Your Apointo admin access',
+    text: `Hi ${opts.name}, you have been invited to the Apointo admin dashboard. Set your password: ${opts.resetUrl}`,
+    html: `<p>Hi ${opts.name},</p><p>You have been invited to the Apointo admin dashboard.</p><p><a href="${opts.resetUrl}">Set your password</a></p><p>Then open <a href="${appBaseUrl()}/admin">${appBaseUrl()}/admin</a>.</p>`,
+  });
+}
