@@ -14,6 +14,7 @@ import { QrSticker } from '@/components/QrSticker';
 import { GoogleBookConnect } from '@/components/profile/GoogleBookConnect';
 import { formatBusinessCode, googleMapsSearchUrl } from '@/lib/place';
 import { isShopDashboardRole } from '@/lib/shop-privileges';
+import { CATEGORIES, getCategoryDisplayName } from '@/lib/booking-schema';
 
 interface Business {
   id: string;
@@ -132,7 +133,7 @@ export function BusinessDetailsForm({ embedded = false }: { embedded?: boolean }
               }`}
             >
               {biz.name}
-              <span className="ml-2 text-xs capitalize text-gray-500">{biz.category}</span>
+              <span className="ml-2 text-xs text-gray-500">{getCategoryDisplayName(biz.category)}</span>
             </button>
           ))}
         </div>
@@ -166,7 +167,20 @@ export function BusinessDetailsForm({ embedded = false }: { embedded?: boolean }
           </div>
           <div>
             <label className="mb-1 block text-xs text-gray-500">Category</label>
-            <Input value={business.category} onChange={(e) => setBusiness({ ...business, category: e.target.value })} />
+            <select
+              className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-base dark:border-gray-700 dark:bg-[#0b0d12]"
+              value={business.category}
+              onChange={(e) => setBusiness({ ...business, category: e.target.value })}
+            >
+              {CATEGORIES.some((c) => c.id === business.category) ? null : (
+                <option value={business.category}>{getCategoryDisplayName(business.category)}</option>
+              )}
+              {CATEGORIES.map((cat) => (
+                <option key={cat.id} value={cat.id}>
+                  {cat.icon} {cat.name}
+                </option>
+              ))}
+            </select>
           </div>
           <div>
             <label className="mb-1 block text-xs text-gray-500">Location / address</label>
@@ -240,7 +254,7 @@ export function BusinessDetailsForm({ embedded = false }: { embedded?: boolean }
           phone={business.contactPhone}
           address={business.location}
           uniqueCode={business.uniqueCode}
-          category={business.category}
+          category={getCategoryDisplayName(business.category)}
         />
       </div>
     </>

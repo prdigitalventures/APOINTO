@@ -4,6 +4,13 @@ import {
   isStartUtterance,
   type OnboardingState,
 } from '../src/lib/ai-onboarding';
+import {
+  inferCategory,
+  normalizeCategory,
+  getBookingSchema,
+  getCategoryDisplayName,
+  BUSINESS_CATEGORIES,
+} from '../src/lib/booking-schema';
 
 function chat(messages: string[]) {
   let state = createInitialState();
@@ -119,6 +126,63 @@ seeded = replayUntil(seeded, 'Catify').state;
 const askedAgain = replayUntil(seeded, 'Catify');
 assert(askedAgain.state.businessName === 'Catify', 'second Catify does not clear name');
 assert(!/what is your business name/i.test(askedAgain.response), 'already-named state never re-asks name');
+
+const industryMap: Array<[string, string]> = [
+  ['Barbers', 'barber'],
+  ['Saloon', 'beauty'],
+  ['Yoga', 'yoga'],
+  ['Small Business', 'small_business'],
+  ['Tattoo Studio', 'tattoo'],
+  ['Physician', 'physician'],
+  ['Coaching', 'coaching'],
+  ['Medical Scheduling', 'medical'],
+  ['Meeting Rooms', 'meeting_room'],
+  ['Fitness Studios', 'fitness'],
+  ['Dental', 'dental'],
+  ['HubSpots', 'hub'],
+  ['coworking', 'hub'],
+  ['Lashes', 'lashes'],
+  ['Legal Services', 'legal'],
+  ['Cleaning', 'cleaning'],
+  ['Therapy', 'therapy'],
+  ['Wine Tour Booking', 'wine_tour'],
+  ['Chiropractors', 'chiropractor'],
+  ['Acupuncture', 'acupuncture'],
+  ['Beauty Salons', 'beauty'],
+  ['Hairdressers', 'hairdresser'],
+  ['Doctors', 'doctors'],
+  ['Massage Therapists', 'massage'],
+  ['Reiki', 'reiki'],
+  ['Pilates', 'pilates'],
+  ['Skincare Clinics', 'skincare'],
+  ['Music Lessons', 'music'],
+  ['Personal Trainers', 'personal_trainer'],
+  ['Mentors', 'mentor'],
+  ['VIP', 'vip'],
+  ['MLA', 'mla'],
+  ['MP', 'mp'],
+  ['Leader', 'leader'],
+  ['Salon', 'salon'],
+];
+
+for (const [phrase, id] of industryMap) {
+  const got = normalizeCategory(phrase) || inferCategory(phrase);
+  assert(got === id, `${phrase} => ${id}, got ${got}`);
+  assert(getBookingSchema(id).category === id, `schema exists for ${id}`);
+}
+
+assert(inferCategory("Create appointment booking system for my 'Green Trends' saloon") === 'beauty', 'saloon sentence stays beauty');
+assert(getCategoryDisplayName('vip') === 'VIP', 'VIP display name');
+assert(getCategoryDisplayName('mla') === 'MLA', 'MLA display name');
+assert(getCategoryDisplayName('mp') === 'MP', 'MP display name');
+assert(getCategoryDisplayName('leader') === 'Leader', 'Leader display name');
+assert(getCategoryDisplayName('hub') === 'Hub / coworking', 'hub display name');
+assert(getBookingSchema('vip').staffRequired === true, 'VIP consultation requires the person');
+assert(getBookingSchema('meeting_room').staffRequired === false, 'meeting rooms are venue bookings');
+assert(BUSINESS_CATEGORIES.length >= 32, 'catalog covers listed industries');
+
+const yogaChat = chat(['Bow', 'Sunrise Flow', 'Yoga']);
+assert(yogaChat.state.category === 'yoga', `Yoga onboarding maps to yoga, got ${yogaChat.state.category}`);
 
 if (process.exitCode) {
   console.error('Some onboarding tests failed');

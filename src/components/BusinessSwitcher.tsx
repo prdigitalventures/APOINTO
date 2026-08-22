@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { ChevronsUpDown } from 'lucide-react';
 import { useActiveBusiness } from './ActiveBusinessProvider';
+import { getCategoryDisplayName } from '@/lib/booking-schema';
 
 export function BusinessSwitcher({ compact = false }: { compact?: boolean }) {
   const { businesses, active, setActiveId } = useActiveBusiness();
@@ -20,8 +21,8 @@ export function BusinessSwitcher({ compact = false }: { compact?: boolean }) {
         <span className="min-w-0">
           <span className="block truncate text-sm font-semibold">{active?.name || 'Select business'}</span>
           {active?.category ? (
-            <span className="block truncate text-xs capitalize text-indigo-700 dark:text-indigo-300">
-              {active.category}
+            <span className="block truncate text-xs text-indigo-700 dark:text-indigo-300">
+              {getCategoryDisplayName(active.category)}
               {active.uniqueCode ? ` · ${active.uniqueCode}` : ''}
             </span>
           ) : null}
@@ -43,7 +44,7 @@ export function BusinessSwitcher({ compact = false }: { compact?: boolean }) {
               }`}
             >
               {biz.name}
-              <span className="mt-0.5 block text-xs capitalize text-gray-500">{biz.category}</span>
+              <span className="mt-0.5 block text-xs text-gray-500">{getCategoryDisplayName(biz.category)}</span>
             </button>
           ))}
         </div>

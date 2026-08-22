@@ -1,6 +1,6 @@
 import { prisma } from './db';
 import { allocateUniqueCode } from './business-code';
-import { getBookingSchema } from './booking-schema';
+import { getBookingSchema, resolveCategoryId } from './booking-schema';
 import { slugify } from './utils';
 import { normalizeEmail } from './identity';
 
@@ -29,7 +29,7 @@ export async function createBusinessForOwner(input: {
   const existing = await prisma.business.findUnique({ where: { slug } });
   if (existing) slug = `${slug}${Date.now().toString(36)}`;
 
-  const category = input.category || 'beauty';
+  const category = resolveCategoryId(input.category);
   const schema = getBookingSchema(category);
   const uniqueCode = await allocateUniqueCode();
 

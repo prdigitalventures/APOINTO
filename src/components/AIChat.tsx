@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
 import { Send, Bot, User } from 'lucide-react';
+import { CATEGORIES } from '@/lib/booking-schema';
+import type { OnboardingState } from '@/lib/ai-onboarding';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -21,10 +23,10 @@ export function AIChat({ onComplete }: AIChatProps) {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [onboardingState, setOnboardingState] = useState<OnboardingState | null>(null);
 
-  const sendMessage = async () => {
-    if (!input.trim() || loading) return;
-    const userMsg = input.trim();
+  const sendText = async (userMsg: string) => {
+    if (!userMsg.trim() || loading) return;
     setInput('');
     setMessages((prev) => [...prev, { role: 'user', content: userMsg }]);
     setLoading(true);
@@ -37,6 +39,7 @@ export function AIChat({ onComplete }: AIChatProps) {
       });
       const data = await res.json();
       if (data.sessionId) setSessionId(data.sessionId);
+      if (data.state) setOnboardingState(data.state as OnboardingState);
       setMessages((prev) => [...prev, { role: 'assistant', content: data.response }]);
       if (data.complete && data.business) {
         onComplete?.(data.business);
@@ -47,6 +50,12 @@ export function AIChat({ onComplete }: AIChatProps) {
       setLoading(false);
     }
   };
+
+  const sendMessage = async () => {
+    await sendText(input.trim());
+  };
+
+  const waitingForCategory = Boolean(onboardingState?.businessName) && !onboardingState?.category;
 
   return (
     <div className="flex flex-col h-full">
@@ -70,6 +79,24 @@ export function AIChat({ onComplete }: AIChatProps) {
           </div>
         )}
       </div>
+      {waitingForCategory ? (
+        <div className="max-h-40 overflow-y-auto border-t px-3 py-2">
+          <p className="mb-2 text-xs font-medium text-gray-500">Choose a business type</p>
+          <div className="flex flex-wrap gap-1.5">
+            {CATEGORIES.map((cat) => (
+              <button
+                key={cat.id}
+                type="button"
+                disabled={loading}
+                onClick={() => sendText(cat.name)}
+                className="rounded-full border border-gray-200 bg-white px-2.5 py-1 text-xs text-gray-700 hover:border-indigo-400 dark:border-gray-700 dark:bg-[#16181d] dark:text-gray-200"
+              >
+                {cat.icon} {cat.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
       <div className="border-t p-4 flex gap-2">
         <Input
           value={input}

@@ -13,6 +13,7 @@ import {
 import type { LucideIcon } from 'lucide-react';
 import { useState } from 'react';
 import { useActiveBusiness } from './ActiveBusinessProvider';
+import { getCategoryDisplayName } from '@/lib/booking-schema';
 
 interface NavItem {
   href: string;
@@ -109,7 +110,7 @@ export function OwnerBottomNav() {
                     }`}
                   >
                     {biz.name}
-                    <span className="ml-2 text-xs capitalize text-gray-500">{biz.category}</span>
+                    <span className="ml-2 text-xs text-gray-500">{getCategoryDisplayName(biz.category)}</span>
                   </button>
                 ))}
               </div>

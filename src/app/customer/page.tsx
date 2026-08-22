@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/Button';
 import { StatusChip } from '@/components/ui/StatusChip';
 import { CustomerAssistantBar } from '@/components/CustomerAssistantBar';
 import { formatTime12h, CATEGORIES } from '@/lib/utils';
+import { getCategoryDisplayName } from '@/lib/booking-schema';
 import { format, isToday, isTomorrow } from 'date-fns';
 import { LogOut, MapPin, Navigation } from 'lucide-react';
 
@@ -254,7 +255,7 @@ export default function CustomerHome() {
                 <div key={biz.slug} className="bg-white rounded-2xl border p-4 flex items-center justify-between">
                   <div>
                     <h3 className="font-semibold">{biz.name}</h3>
-                    <p className="text-sm text-gray-500 capitalize">{biz.category}</p>
+                    <p className="text-sm text-gray-500">{getCategoryDisplayName(biz.category)}</p>
                   </div>
                   <Link href={`/${biz.slug}/book`}>
                     <Button size="sm">Book Again</Button>
@@ -267,16 +268,16 @@ export default function CustomerHome() {
 
         <section>
           <h2 className="font-semibold mb-3">Explore</h2>
-          <div className="grid grid-cols-4 gap-3">
+          <div className="flex max-h-64 flex-wrap gap-2 overflow-y-auto">
             {CATEGORIES.map((cat) => (
               <button
                 key={cat.id}
                 type="button"
                 onClick={() => setCategory(category === cat.id ? null : cat.id)}
-                className={`bg-white rounded-xl border p-3 text-center ${category === cat.id ? 'border-indigo-500 ring-2 ring-indigo-100' : ''}`}
+                className={`rounded-full border bg-white px-3 py-1.5 text-center text-xs ${category === cat.id ? 'border-indigo-500 ring-2 ring-indigo-100' : ''}`}
               >
-                <div className="text-2xl mb-1">{cat.icon}</div>
-                <p className="text-xs text-gray-600">{cat.name}</p>
+                <span className="mr-1">{cat.icon}</span>
+                {cat.name}
               </button>
             ))}
           </div>
@@ -297,8 +298,8 @@ export default function CustomerHome() {
                     <div className="flex justify-between">
                       <div>
                         <h3 className="font-semibold">{biz.name}</h3>
-                        <p className="text-sm text-gray-500 capitalize">
-                          {biz.category}
+                        <p className="text-sm text-gray-500">
+                          {getCategoryDisplayName(biz.category)}
                           {biz.location ? ` · ${biz.location}` : ''}
                         </p>
                         {biz.services?.[0] && (

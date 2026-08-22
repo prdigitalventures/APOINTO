@@ -51,13 +51,14 @@ export async function POST(req: NextRequest) {
     }
     const data = await req.json();
     const { slugify } = await import('@/lib/utils');
-    const { getBookingSchema } = await import('@/lib/booking-schema');
+    const { getBookingSchema, resolveCategoryId } = await import('@/lib/booking-schema');
 
     let slug = slugify(data.name);
     const existing = await prisma.business.findUnique({ where: { slug } });
     if (existing) slug = `${slug}${Date.now().toString(36)}`;
 
-    const schema = getBookingSchema(data.category || 'beauty');
+    const category = resolveCategoryId(data.category);
+    const schema = getBookingSchema(category);
     const uniqueCode = await allocateUniqueCode();
 
     const business = await prisma.business.create({
@@ -65,7 +66,7 @@ export async function POST(req: NextRequest) {
         ownerId: session.id,
         name: data.name,
         slug,
-        category: data.category || 'beauty',
+        category,
         location: data.location,
         description: data.description,
         about: data.about,

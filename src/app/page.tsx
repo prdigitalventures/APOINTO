@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/AuthProvider';
 import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
+import { CATEGORIES } from '@/lib/booking-schema';
 import {
   Sparkles,
   Calendar,
@@ -178,7 +179,7 @@ export default function HomePage() {
             <span className="text-indigo-600">AI builds your booking system.</span>
           </h1>
           <p className="text-lg text-gray-600 mb-8">
-            Universal appointment platform for salons, clinics, auto services, tutors, sports courts, and more.
+            Universal appointment platform for salons, clinics, yoga, fitness, dental, legal, coworking hubs, and more.
             Go live in under 5 minutes.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -192,6 +193,16 @@ export default function HomePage() {
                 Book an Appointment
               </Button>
             </Link>
+          </div>
+          <div className="mt-8 flex flex-wrap justify-center gap-2">
+            {CATEGORIES.map((cat) => (
+              <span
+                key={cat.id}
+                className="rounded-full border border-gray-200 bg-white px-3 py-1 text-xs text-gray-600"
+              >
+                {cat.icon} {cat.name}
+              </span>
+            ))}
           </div>
         </div>
 

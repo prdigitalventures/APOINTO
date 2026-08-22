@@ -18,7 +18,12 @@ export async function PATCH(
     const data: Record<string, unknown> = {};
 
     if (typeof body.name === 'string' && body.name.trim()) data.name = body.name.trim().slice(0, 80);
-    if (typeof body.category === 'string' && body.category.trim()) data.category = body.category.trim().slice(0, 40);
+    if (typeof body.category === 'string' && body.category.trim()) {
+      const { getBookingSchema, resolveCategoryId } = await import('@/lib/booking-schema');
+      const category = resolveCategoryId(body.category);
+      data.category = category;
+      data.bookingSchema = JSON.stringify(getBookingSchema(category));
+    }
     if (typeof body.location === 'string') data.location = body.location.trim().slice(0, 120) || null;
     if (typeof body.description === 'string') data.description = body.description.trim().slice(0, 500) || null;
     if (typeof body.about === 'string') data.about = body.about.trim().slice(0, 2000) || null;

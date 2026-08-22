@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { reportEmailResponse, useEmailNotice } from '@/components/admin/EmailNotice';
+import { CATEGORIES } from '@/lib/booking-schema';
 
 function LivePill({ live }: { live: boolean }) {
   return (
@@ -125,7 +126,17 @@ function BusinessesInner() {
       <form onSubmit={create} className="mt-6 grid gap-3 rounded-2xl border bg-white p-5 sm:grid-cols-2 dark:bg-[#16181d] dark:border-gray-800">
         <p className="sm:col-span-2 font-semibold">Create shop (no email yet)</p>
         <Input required placeholder="Business name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-        <Input placeholder="Category (beauty, legal, spa…)" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} />
+        <select
+          className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-base dark:border-gray-700 dark:bg-[#0b0d12]"
+          value={form.category}
+          onChange={(e) => setForm({ ...form, category: e.target.value })}
+        >
+          {CATEGORIES.map((cat) => (
+            <option key={cat.id} value={cat.id}>
+              {cat.icon} {cat.name}
+            </option>
+          ))}
+        </select>
         <Input placeholder="Location" value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} />
         <Input required type="email" placeholder="Existing owner email" value={form.ownerEmail} onChange={(e) => setForm({ ...form, ownerEmail: e.target.value })} />
         <Input className="sm:col-span-2" placeholder="Short description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />

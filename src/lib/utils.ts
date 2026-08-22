@@ -50,14 +50,4 @@ export function minutesToTime(minutes: number): string {
 
 export const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
-export const CATEGORIES = [
-  { id: 'beauty', name: 'Beauty', icon: '💇' },
-  { id: 'health', name: 'Health', icon: '🏥' },
-  { id: 'auto', name: 'Auto', icon: '🚗' },
-  { id: 'fitness', name: 'Fitness', icon: '💪' },
-  { id: 'education', name: 'Education', icon: '📚' },
-  { id: 'home', name: 'Home Services', icon: '🏠' },
-  { id: 'sports', name: 'Sports', icon: '⚽' },
-  { id: 'professional', name: 'Professional', icon: '💼' },
-  { id: 'legal', name: 'Legal', icon: '⚖️' },
-];
+export { CATEGORIES } from './booking-schema';

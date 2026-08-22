@@ -1,4 +1,4 @@
-import { inferCategory } from './booking-schema';
+import { getCategoryDisplayName, inferCategory, normalizeCategory } from './booking-schema';
 import { interpretOnboardingWithLlm, type LlmOnboardingExtract } from './onboarding-llm';
 import { slugify } from './utils';
 
@@ -256,7 +256,7 @@ function overlayLlm(
     extracted.businessName = llmExtract.businessName;
   }
   if (!extracted.category && llmExtract.category) {
-    extracted.category = normalizeCategory(llmExtract.category);
+    extracted.category = normalizeCategory(llmExtract.category) || inferCategory(llmExtract.category);
   }
   if (!extracted.location && llmExtract.location && !state.location) {
     extracted.location = llmExtract.location.trim();
@@ -351,7 +351,7 @@ function getNextMissingQuestion(state: OnboardingState): string {
     return "Great, let's set up your booking system. What is your business name?";
   }
   if (!state.category) {
-    return `Nice, ${state.businessName}. What type of business is it? (Salon, Clinic, Legal, Car Service, Tutoring, Sports Court, etc.)`;
+    return `Nice, ${state.businessName}. What type of business is it? Pick a category or type one (Salon, Yoga, Dental, Legal, Meeting Rooms, VIP, etc.)`;
   }
   if (!state.location && !state.locationSkipped) {
     return `Got it — ${state.businessName} (${getCategoryLabel(state.category)}). Where are you located? City and area is enough, or say "skip".`;
@@ -439,18 +439,17 @@ function extractCategory(
   llmExtract?: LlmOnboardingExtract | null
 ): string | undefined {
   if (llmExtract?.category) {
-    const fromLlm = normalizeCategory(llmExtract.category);
+    const fromLlm = normalizeCategory(llmExtract.category) || inferCategory(llmExtract.category);
     if (fromLlm) return fromLlm;
   }
+  const mapped = normalizeCategory(text);
+  if (mapped) return mapped;
   const inferred = inferCategory(text);
   if (inferred) return inferred;
-  if (/salon|saloon|beauty|parlour|parlor|spa|barber|hair/i.test(text)) return 'beauty';
   if (state.category) return undefined;
   if (!state.businessName) return undefined;
   if (isStartUtterance(text) || isFrustration(text) || SKIP_WORDS.test(text)) return undefined;
   if (text.trim().toLowerCase() === state.businessName.trim().toLowerCase()) return undefined;
-  const mapped = normalizeCategory(text);
-  if (mapped) return mapped;
   const words = text.trim().split(/\s+/);
   if (words.length >= 1 && words.length <= 6 && text.trim().length <= 40) {
     return slugify(text) || undefined;
@@ -473,41 +472,6 @@ function extractLocation(
   if (isStartUtterance(text) || isFrustration(text) || SKIP_WORDS.test(text)) return undefined;
   if (text.trim().length < 2 || text.trim().length > 120) return undefined;
   return text.trim();
-}
-
-function normalizeCategory(raw: string): string | undefined {
-  const inferred = inferCategory(raw);
-  if (inferred) return inferred;
-  const lower = raw.toLowerCase().replace(/[_-]+/g, ' ').trim();
-  const map: Record<string, string> = {
-    salon: 'beauty',
-    saloon: 'beauty',
-    beauty: 'beauty',
-    spa: 'beauty',
-    barber: 'beauty',
-    clinic: 'health',
-    hospital: 'health',
-    dentist: 'health',
-    health: 'health',
-    garage: 'auto',
-    auto: 'auto',
-    mechanic: 'auto',
-    lawyer: 'legal',
-    legal: 'legal',
-    attorney: 'legal',
-    tutor: 'education',
-    education: 'education',
-    gym: 'fitness',
-    fitness: 'fitness',
-    yoga: 'fitness',
-    sports: 'sports',
-    court: 'sports',
-    plumber: 'home',
-    home: 'home',
-    professional: 'professional',
-  };
-  if (map[lower]) return map[lower];
-  return undefined;
 }
 
 function preserveNameCasing(name: string): string {
@@ -705,18 +669,7 @@ export function buildFinalSummary(state: OnboardingState): string {
 }
 
 function getCategoryLabel(category: string): string {
-  const labels: Record<string, string> = {
-    beauty: 'Beauty / Salon',
-    health: 'Health / Clinic',
-    auto: 'Auto Service',
-    education: 'Education / Tutoring',
-    sports: 'Sports',
-    fitness: 'Fitness',
-    home: 'Home Services',
-    professional: 'Professional Services',
-    legal: 'Legal / Professional',
-  };
-  return labels[category] || category;
+  return getCategoryDisplayName(category);
 }
 
 function parseWorkingHours(text: string) {
@@ -771,14 +724,14 @@ function formatTime12(time: string): string {
 
 export async function createBusinessFromOnboarding(userId: string, state: OnboardingState) {
   const { prisma } = await import('./db');
-  const { getBookingSchema } = await import('./booking-schema');
+  const { getBookingSchema, resolveCategoryId } = await import('./booking-schema');
   const { allocateUniqueCode } = await import('./business-code');
 
   let slug = slugify(state.businessName || 'business');
   const existing = await prisma.business.findUnique({ where: { slug } });
   if (existing) slug = `${slug}${Date.now().toString(36)}`;
 
-  const category = state.category || 'beauty';
+  const category = resolveCategoryId(state.category);
   const schema = getBookingSchema(category);
   const uniqueCode = await allocateUniqueCode();
 

@@ -5,6 +5,7 @@
  * If none are set, the deterministic parser in ai-onboarding.ts still advances the wizard.
  */
 import type { OnboardingState, ServiceDraft } from './ai-onboarding';
+import { getOnboardingCategoryIds } from './booking-schema';
 
 export interface LlmOnboardingExtract {
   frustration?: boolean;
@@ -82,7 +83,7 @@ Rules:
 - Start utterances like "Bow", "hi", "create my booking system" are start=true and must NOT be a businessName.
 - Short brand names (catify, Catify, Joe's Cuts) ARE business names when we are missing businessName.
 - Profanity/frustration (fuck, shit, this is broken) => frustration=true, do not copy them into any field.
-- category should be one of: beauty, health, auto, education, sports, fitness, home, professional, legal (map salon/saloon to beauty, lawyer to legal).
+- category should be one of: ${getOnboardingCategoryIds()}. Map saloon/beauty salon to beauty, barber to barber, hairdresser to hairdresser, salon to salon, yoga to yoga (not fitness), pilates to pilates, dental to dental, physician to physician, doctors to doctors, HubSpots/coworking/hot-desk to hub (not HubSpot CRM), wine tour to wine_tour, meeting rooms to meeting_room, VIP/MLA/MP/Leader to vip/mla/mp/leader, small business to small_business. lawyer to legal.
 - Do not invent fields the user did not mention.
 - skipLocation/skipStaff if they clearly skip that step.
 
