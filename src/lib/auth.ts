@@ -11,7 +11,7 @@ import {
   normalizePhone,
 } from './identity';
 
-export type UserRole = 'OWNER' | 'CUSTOMER' | 'ADMIN' | 'STAFF';
+export type UserRole = 'OWNER' | 'CUSTOMER' | 'ADMIN' | 'STAFF' | 'SHOP_STAFF';
 export const ACCOUNT_DISABLED_MESSAGE = 'This account has been disabled. Contact Apointo support.';
 export {
   ALREADY_REGISTERED_MESSAGE,

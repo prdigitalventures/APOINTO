@@ -19,6 +19,18 @@ export async function GET(
       },
     });
     if (!user) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+
+    const shopCrm = await prisma.crmContact.findMany({
+      where: { phone: user.phone },
+      include: { owner: { select: { name: true, phone: true } } },
+      take: 20,
+    });
+    const shopMedia = await prisma.customerMedia.findMany({
+      where: { phone: user.phone },
+      orderBy: { createdAt: 'desc' },
+      take: 24,
+    });
+
     return NextResponse.json({
       contact: {
         id: user.id,
@@ -33,6 +45,25 @@ export async function GET(
         tags: user.platformContact?.tags || '',
         businesses: user.businesses,
         bookingCount: user._count.bookings,
+        shopCrm: shopCrm.map((c) => ({
+          ownerName: c.owner.name,
+          ownerPhone: c.owner.phone,
+          name: c.name,
+          notes: c.notes,
+          tags: c.tags,
+          email: c.email,
+          address: c.address,
+          birthday: c.birthday,
+          lastWorkNotes: c.lastWorkNotes,
+          updatedAt: c.updatedAt,
+        })),
+        shopMedia: shopMedia.map((m) => ({
+          id: m.id,
+          kind: m.kind,
+          data: m.data,
+          caption: m.caption,
+          createdAt: m.createdAt,
+        })),
       },
     });
   } catch (error) {

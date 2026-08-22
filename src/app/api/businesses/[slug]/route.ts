@@ -16,6 +16,7 @@ export async function GET(
       },
       businessHours: { orderBy: { day: 'asc' } },
       breaks: true,
+      media: { orderBy: { createdAt: 'desc' }, take: 24 },
       ownerUser: { select: { phone: true, name: true } },
     },
   });

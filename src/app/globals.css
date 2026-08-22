@@ -75,4 +75,21 @@ body {
     box-shadow: none;
     background: #fff !important;
   }
+
+  body.idcard-print-mode .no-print,
+  body.idcard-print-mode .receipt-modal-chrome,
+  body.idcard-print-mode header,
+  body.idcard-print-mode nav {
+    display: none !important;
+  }
+
+  body.idcard-print-mode .receipt-overlay {
+    position: static !important;
+    background: transparent !important;
+    display: block !important;
+  }
+
+  body.idcard-print-mode .staff-id-card {
+    box-shadow: none;
+  }
 }

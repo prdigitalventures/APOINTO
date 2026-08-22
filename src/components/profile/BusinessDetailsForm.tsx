@@ -13,6 +13,7 @@ import { compressImage } from '@/components/profile/compressImage';
 import { QrSticker } from '@/components/QrSticker';
 import { GoogleBookConnect } from '@/components/profile/GoogleBookConnect';
 import { formatBusinessCode, googleMapsSearchUrl } from '@/lib/place';
+import { isShopDashboardRole } from '@/lib/shop-privileges';
 
 interface Business {
   id: string;
@@ -28,7 +29,7 @@ interface Business {
   googleBookLinkedAt?: string | null;
 }
 
-export function BusinessDetailsForm() {
+export function BusinessDetailsForm({ embedded = false }: { embedded?: boolean }) {
   const { user, loading } = useAuth();
   const { businesses, active, setActiveId, refresh } = useActiveBusiness();
   const router = useRouter();
@@ -43,7 +44,7 @@ export function BusinessDetailsForm() {
       router.push('/login');
       return;
     }
-    if (user.role !== 'OWNER') router.push('/customer');
+    if (!isShopDashboardRole(user.role)) router.push('/customer');
   }, [loading, router, user]);
 
   useEffect(() => {
@@ -66,7 +67,7 @@ export function BusinessDetailsForm() {
     });
   }, [active]);
 
-  if (loading || !user || user.role !== 'OWNER') {
+  if (loading || !user || !isShopDashboardRole(user.role)) {
     return <div className="flex min-h-screen items-center justify-center">Loading...</div>;
   }
 
@@ -114,12 +115,8 @@ export function BusinessDetailsForm() {
     }
   };
 
-  return (
-    <ProfileSubpage
-      title="Business details"
-      subtitle="Photo, address, QR sticker, and Google Book"
-      backHref="/owner/profile"
-    >
+  const inner = (
+    <>
       {businesses.length > 1 ? (
         <div className="space-y-2">
           <p className="text-xs font-medium uppercase tracking-wide text-gray-500">Your businesses</p>
@@ -246,6 +243,18 @@ export function BusinessDetailsForm() {
           category={business.category}
         />
       </div>
+    </>
+  );
+
+  if (embedded) return <div className="px-4 pb-4">{inner}</div>;
+
+  return (
+    <ProfileSubpage
+      title="Business details"
+      subtitle="Photo, address, QR sticker, and Google Book"
+      backHref="/owner/profile"
+    >
+      {inner}
     </ProfileSubpage>
   );
 }

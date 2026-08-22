@@ -42,7 +42,7 @@ export function postLoginPath(opts: { role: string; isStaff?: boolean; next?: st
     if (path && (path === '/admin' || path.startsWith('/admin/'))) return path;
     return '/admin';
   }
-  if (opts.role === 'OWNER') {
+  if (opts.role === 'OWNER' || opts.role === 'SHOP_STAFF') {
     return authDestination(opts.next, 'OWNER');
   }
   return authDestination(opts.next, 'CUSTOMER');

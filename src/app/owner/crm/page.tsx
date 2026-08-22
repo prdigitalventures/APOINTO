@@ -10,7 +10,8 @@ import { useActiveBusiness } from '@/components/ActiveBusinessProvider';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { formatTime12h } from '@/lib/utils';
-import { telLink, whatsappLink, type CrmStatus } from '@/lib/crm';
+import { telLink, whatsappLink, revisitReminderText, type CrmStatus } from '@/lib/crm';
+import { isShopDashboardRole } from '@/lib/shop-privileges';
 
 interface Customer {
   phone: string;
@@ -51,7 +52,7 @@ export default function OwnerCrmPage() {
       router.push('/login');
       return;
     }
-    if (user.role !== 'OWNER') router.push('/customer');
+    if (!isShopDashboardRole(user.role)) router.push('/customer');
   }, [loading, router, user]);
 
   useEffect(() => {
@@ -66,7 +67,7 @@ export default function OwnerCrmPage() {
   }, [q, businessId]);
 
   useEffect(() => {
-    if (!user || user.role !== 'OWNER') return;
+    if (!user || !isShopDashboardRole(user.role)) return;
     const t = setTimeout(() => {
       fetch(`/api/owner/customers${query ? `?${query}` : ''}`)
         .then((r) => r.json())
@@ -174,6 +175,14 @@ export default function OwnerCrmPage() {
           </div>
         ) : (
           customers.map((customer) => {
+            const reminder = whatsappLink(
+              customer.phone,
+              revisitReminderText({
+                name: customer.name,
+                businessName: customer.businessName,
+                lastServiceName: customer.lastServiceName,
+              })
+            );
             const wa = whatsappLink(
               customer.phone,
               `Hi ${customer.name}, this is ${customer.businessName || 'Apointo'}${
@@ -226,12 +235,14 @@ export default function OwnerCrmPage() {
                   >
                     <MessageCircle size={14} /> WhatsApp
                   </a>
-                  <Link
-                    href={`/owner/crm/${customer.phone}`}
-                    className="inline-flex flex-1 items-center justify-center rounded-xl bg-gray-50 py-2 text-sm font-medium dark:bg-gray-800"
+                  <a
+                    href={reminder}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex flex-1 items-center justify-center gap-1 rounded-xl bg-amber-50 py-2 text-sm font-medium text-amber-800 dark:bg-amber-950 dark:text-amber-200"
                   >
-                    History
-                  </Link>
+                    Remind
+                  </a>
                 </div>
                 {customer.businessName ? (
                   <p className="mt-2 text-xs text-gray-500">{customer.businessName}</p>

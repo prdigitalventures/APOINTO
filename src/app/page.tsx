@@ -84,7 +84,13 @@ export default function HomePage() {
 
   useEffect(() => {
     if (!loading && user) {
-      router.push(user.isStaff || user.role === 'ADMIN' || user.role === 'STAFF' ? '/admin' : user.role === 'OWNER' ? '/owner' : '/customer');
+      router.push(
+        user.isStaff || user.role === 'ADMIN' || user.role === 'STAFF'
+          ? '/admin'
+          : user.role === 'OWNER' || user.role === 'SHOP_STAFF'
+            ? '/owner'
+            : '/customer'
+      );
     }
   }, [user, loading, router]);
 

@@ -1,15 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireOwner } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { assertBusinessInScope, requireShopAccess, shopErrorResponse } from '@/lib/shop-access';
 
 export async function PATCH(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await requireOwner();
+    const ctx = await requireShopAccess('listing', 'EDIT');
+    await assertBusinessInScope(ctx, params.id);
     const business = await prisma.business.findFirst({
-      where: { id: params.id, ownerId: session.id },
+      where: { id: params.id, ownerId: ctx.ownerId },
     });
     if (!business) return NextResponse.json({ error: 'Business not found' }, { status: 404 });
 
@@ -45,10 +46,12 @@ export async function PATCH(
     const updated = await prisma.business.update({
       where: { id: business.id },
       data,
+      include: { media: { orderBy: { createdAt: 'desc' } } },
     });
 
     return NextResponse.json({ business: updated });
   } catch (error) {
-    return NextResponse.json({ error: (error as Error).message }, { status: 400 });
+    const { error: message, status } = shopErrorResponse(error);
+    return NextResponse.json({ error: message }, { status });
   }
 }

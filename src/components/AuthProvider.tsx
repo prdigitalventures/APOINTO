@@ -1,19 +1,22 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import type { ShopPrivilegeMap } from '@/lib/shop-privileges';
 
 interface User {
   id: string;
   name: string;
   phone: string;
   email?: string | null;
-  role: 'OWNER' | 'CUSTOMER' | 'ADMIN' | 'STAFF';
+  role: 'OWNER' | 'CUSTOMER' | 'ADMIN' | 'STAFF' | 'SHOP_STAFF';
   emailVerified?: boolean;
   avatar?: string | null;
   rewardPoints?: number;
   referralCode?: string;
   referralLink?: string;
   isStaff?: boolean;
+  shopPrivileges?: ShopPrivilegeMap;
+  isOwner?: boolean;
 }
 
 interface AuthContextType {

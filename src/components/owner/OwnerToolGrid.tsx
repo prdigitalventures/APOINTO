@@ -17,6 +17,12 @@ import {
   UserRound,
   Users,
 } from 'lucide-react';
+import {
+  canShop,
+  ownerShopPrivileges,
+  type ShopFeature,
+  type ShopPrivilegeMap,
+} from '@/lib/shop-privileges';
 
 type Tone =
   | 'indigo'
@@ -37,6 +43,7 @@ interface Tool {
   label: string;
   icon: LucideIcon;
   tone: Tone;
+  feature: ShopFeature;
 }
 
 const TONE: Record<Tone, string> = {
@@ -61,34 +68,27 @@ const TONE: Record<Tone, string> = {
     'from-[#cbd5e1] via-[#64748b] to-[#334155] shadow-[0_10px_18px_rgba(100,116,139,0.32)]',
 };
 
-export function ownerTools(slug?: string | null): Tool[] {
-  const items: Tool[] = [
-    { href: '/owner', label: 'Home', icon: Home, tone: 'indigo' },
-    { href: '/owner/calendar', label: 'Calendar', icon: CalendarDays, tone: 'sky' },
-    { href: '/owner/leads', label: 'Leads', icon: Sparkles, tone: 'amber' },
-    { href: '/owner/bookings', label: 'Bookings', icon: ClipboardList, tone: 'violet' },
-    { href: '/owner/services', label: 'Services', icon: Briefcase, tone: 'fuchsia' },
-    { href: '/owner/crm', label: 'Customers', icon: Users, tone: 'teal' },
-    { href: '/owner/staff', label: 'Staff', icon: UserRound, tone: 'blue' },
-    { href: '/owner/profile/business', label: 'Shops', icon: Building2, tone: 'orange' },
-    { href: '/owner/receipts', label: 'Invoices', icon: Receipt, tone: 'emerald' },
-    { href: '/owner/notifications', label: 'Alerts', icon: Bell, tone: 'rose' },
-    { href: '/owner/profile/faqs', label: 'Help', icon: LifeBuoy, tone: 'cyan' },
-    { href: '/owner/profile/settings', label: 'Settings', icon: Settings, tone: 'slate' },
+export function ownerTools(): Tool[] {
+  return [
+    { href: '/owner', label: 'Home', icon: Home, tone: 'indigo', feature: 'home' },
+    { href: '/owner/calendar', label: 'Calendar', icon: CalendarDays, tone: 'sky', feature: 'calendar' },
+    { href: '/owner/leads', label: 'Leads', icon: Sparkles, tone: 'amber', feature: 'leads' },
+    { href: '/owner/bookings', label: 'Bookings', icon: ClipboardList, tone: 'violet', feature: 'bookings' },
+    { href: '/owner/services', label: 'Services', icon: Briefcase, tone: 'fuchsia', feature: 'services' },
+    { href: '/owner/crm', label: 'Customers', icon: Users, tone: 'teal', feature: 'customers' },
+    { href: '/owner/staff', label: 'Staff', icon: UserRound, tone: 'blue', feature: 'staff' },
+    { href: '/owner/profile/business', label: 'Shops', icon: Building2, tone: 'orange', feature: 'shops' },
+    { href: '/owner/listing', label: 'Listing', icon: Globe, tone: 'indigo', feature: 'listing' },
+    { href: '/owner/receipts', label: 'Invoices', icon: Receipt, tone: 'emerald', feature: 'invoices' },
+    { href: '/owner/notifications', label: 'Alerts', icon: Bell, tone: 'rose', feature: 'alerts' },
+    { href: '/owner/profile/faqs', label: 'Help', icon: LifeBuoy, tone: 'cyan', feature: 'home' },
+    { href: '/owner/profile/settings', label: 'Settings', icon: Settings, tone: 'slate', feature: 'settings' },
   ];
-  if (slug) {
-    items.splice(8, 0, {
-      href: `/${slug}`,
-      label: 'Listing',
-      icon: Globe,
-      tone: 'indigo',
-    });
-  }
-  return items;
 }
 
-export function OwnerToolGrid({ slug }: { slug?: string | null }) {
-  const tools = ownerTools(slug);
+export function OwnerToolGrid({ privileges }: { slug?: string | null; privileges?: ShopPrivilegeMap }) {
+  const map = privileges || ownerShopPrivileges();
+  const tools = ownerTools().filter((tool) => canShop(map, tool.feature, 'READ'));
   return (
     <section>
       <div className="mb-3 flex items-end justify-between gap-3">

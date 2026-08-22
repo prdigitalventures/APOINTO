@@ -37,6 +37,8 @@ model User {
   onboardingSessions   OnboardingSession[]
   feedback             Feedback[]
   crmContacts          CrmContact[]
+  customerMedia        CustomerMedia[]
+  shopStaffLogin       Staff[]             @relation("ShopStaffLogin")
   staffProfile         StaffProfile?
   staffRole            Role?               @relation(fields: [staffRoleId], references: [id])
   staffRoleId          String?
@@ -75,6 +77,7 @@ model Business {
   ownerUser     User          @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   services      Service[]
   staff         Staff[]
+  media         ShopMedia[]
   businessHours BusinessHour[]
   breaks        Break[]
   holidays      Holiday[]
@@ -101,17 +104,38 @@ model Service {
 }
 
 model Staff {
-  id         String  @id @default(cuid())
-  businessId String
-  name       String
-  role       String?
-  isActive   Boolean @default(true)
-  metadata   String?
+  id           String  @id @default(cuid())
+  businessId   String
+  name         String
+  role         String?
+  isActive     Boolean @default(true)
+  metadata     String?
+  phone        String?
+  email        String?
+  bio          String?
+  photo        String?
+  employeeCode String? @unique
+  userId       String? @unique
+  privileges   String?
 
   business      Business       @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  loginUser     User?          @relation("ShopStaffLogin", fields: [userId], references: [id], onDelete: SetNull)
   staffServices StaffService[]
   staffHours    StaffHour[]
   bookings      Booking[]
+}
+
+model ShopMedia {
+  id         String   @id @default(cuid())
+  businessId String
+  kind       String
+  data       String
+  caption    String?
+  createdAt  DateTime @default(now())
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([businessId])
 }
 
 model StaffService {
@@ -279,6 +303,11 @@ model CrmContact {
   name            String
   notes           String?
   statusOverride  String?
+  email           String?
+  address         String?
+  birthday        String?
+  tags            String?
+  lastWorkNotes   String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -286,6 +315,20 @@ model CrmContact {
 
   @@unique([ownerId, phone])
   @@index([ownerId])
+}
+
+model CustomerMedia {
+  id        String   @id @default(cuid())
+  ownerId   String
+  phone     String
+  kind      String
+  data      String
+  caption   String?
+  createdAt DateTime @default(now())
+
+  owner User @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@index([ownerId, phone])
 }
 
 model StaffProfile {

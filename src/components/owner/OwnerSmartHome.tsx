@@ -14,6 +14,7 @@ import { OwnerToolGrid } from '@/components/owner/OwnerToolGrid';
 import { formatBusinessCode, googleMapsSearchUrl } from '@/lib/place';
 import { getCategoryDisplayName } from '@/lib/booking-schema';
 import { formatCurrency } from '@/lib/utils';
+import { isShopDashboardRole } from '@/lib/shop-privileges';
 import type { OwnerAnalyticsRange } from '@/lib/owner-analytics';
 
 type SeriesPoint = { date: string; label: string; bookings: number; revenue: number };
@@ -103,7 +104,7 @@ export function OwnerSmartHome() {
 
   useEffect(() => {
     if (!loading && !user) router.push('/login');
-    if (!loading && user && user.role !== 'OWNER') router.push('/customer');
+    if (!loading && user && !isShopDashboardRole(user.role)) router.push('/customer');
   }, [user, loading, router]);
 
   useEffect(() => {
@@ -113,7 +114,7 @@ export function OwnerSmartHome() {
   }, [user, completedBusiness]);
 
   useEffect(() => {
-    if (!user || user.role !== 'OWNER' || !loaded) return;
+    if (!user || !isShopDashboardRole(user.role) || !loaded) return;
     const params = new URLSearchParams({ range });
     if (active?.id) params.set('businessId', active.id);
     setStats(null);
@@ -295,7 +296,7 @@ export function OwnerSmartHome() {
           )}
         </section>
 
-        <OwnerToolGrid slug={active?.slug} />
+        <OwnerToolGrid slug={active?.slug} privileges={user.shopPrivileges} />
 
         {active ? (
           <section className="rounded-2xl border border-indigo-100 bg-indigo-50 p-4 dark:border-indigo-900 dark:bg-indigo-950/40 lg:p-5">
@@ -336,6 +337,7 @@ export function OwnerSmartHome() {
           </section>
         ) : null}
 
+        {user.role === 'OWNER' ? (
         <button
           type="button"
           onClick={() => setShowOnboarding(true)}
@@ -352,6 +354,7 @@ export function OwnerSmartHome() {
             <ChevronRight className="text-gray-400" />
           </div>
         </button>
+        ) : null}
 
         {businesses.length > 0 ? (
           <section id="shops">

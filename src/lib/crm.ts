@@ -35,3 +35,15 @@ export function telLink(phone: string): string {
   const ten = digits(phone);
   return ten.length === 10 ? `tel:+91${ten}` : `tel:${phone}`;
 }
+
+export function revisitReminderText(opts: {
+  name: string;
+  businessName?: string | null;
+  lastServiceName?: string | null;
+}): string {
+  const shop = opts.businessName || 'Apointo';
+  const service = opts.lastServiceName
+    ? ` You opted for ${opts.lastServiceName} with us.`
+    : ' You have taken a service with us.';
+  return `Hi ${opts.name}, this is ${shop}.${service} Please visit again if you missed coming in or would like to book the same service. We would be happy to help.`;
+}

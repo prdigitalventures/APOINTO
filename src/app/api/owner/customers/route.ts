@@ -1,25 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSession, requireOwner } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { normalizePhone } from '@/lib/identity';
 import { buildCrmList } from '@/lib/owner-crm';
+import { requireShopAccess, shopErrorResponse } from '@/lib/shop-access';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
-  const session = await getSession();
-  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  if (session.role !== 'OWNER') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-
-  const q = req.nextUrl.searchParams.get('q') || undefined;
-  const businessId = req.nextUrl.searchParams.get('businessId') || undefined;
-  const customers = await buildCrmList(session.id, { q, businessId });
-  return NextResponse.json({ customers });
+  try {
+    const ctx = await requireShopAccess('customers', 'READ');
+    const q = req.nextUrl.searchParams.get('q') || undefined;
+    const businessId = req.nextUrl.searchParams.get('businessId') || undefined;
+    const customers = await buildCrmList(ctx.ownerId, { q, businessId });
+    return NextResponse.json({ customers });
+  } catch (error) {
+    const { error: message, status } = shopErrorResponse(error);
+    return NextResponse.json({ error: message }, { status });
+  }
 }
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await requireOwner();
+    const ctx = await requireShopAccess('customers', 'EDIT');
     const body = await req.json();
     const name = typeof body.name === 'string' ? body.name.trim() : '';
     const phone = normalizePhone(typeof body.phone === 'string' ? body.phone : '');
@@ -33,13 +35,14 @@ export async function POST(req: NextRequest) {
     }
 
     const contact = await prisma.crmContact.upsert({
-      where: { ownerId_phone: { ownerId: session.id, phone } },
-      create: { ownerId: session.id, phone, name, notes: notes || null },
+      where: { ownerId_phone: { ownerId: ctx.ownerId, phone } },
+      create: { ownerId: ctx.ownerId, phone, name, notes: notes || null },
       update: { name, notes: notes || undefined },
     });
 
     return NextResponse.json({ customer: { phone: contact.phone, name: contact.name } });
   } catch (error) {
-    return NextResponse.json({ error: (error as Error).message }, { status: 400 });
+    const { error: message, status } = shopErrorResponse(error);
+    return NextResponse.json({ error: message }, { status });
   }
 }

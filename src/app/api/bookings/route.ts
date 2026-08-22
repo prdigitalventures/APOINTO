@@ -13,8 +13,8 @@ export async function POST(req: NextRequest) {
     const { businessId, serviceId, staffId, date, startTime, customerName, customerPhone, customData, isWalkIn } = body;
 
     if (isWalkIn) {
-      if (!session || session.role !== 'OWNER') {
-        return NextResponse.json({ error: 'Only business owners can add walk-ins' }, { status: 403 });
+      if (!session || (session.role !== 'OWNER' && session.role !== 'SHOP_STAFF')) {
+        return NextResponse.json({ error: 'Only shop team can add walk-ins' }, { status: 403 });
       }
     } else {
       const gate = await requireVerifiedCustomer(session);

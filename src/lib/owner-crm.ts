@@ -185,5 +185,21 @@ export async function buildCrmDetail(ownerId: string, rawPhone: string) {
       businessName: v.businessName,
       notes: v.bookingNotes,
     })),
+    email: contact?.email || '',
+    address: contact?.address || '',
+    birthday: contact?.birthday || '',
+    tags: contact?.tags || '',
+    lastWorkNotes: contact?.lastWorkNotes || '',
+    media: (await prisma.customerMedia.findMany({
+      where: { ownerId, phone },
+      orderBy: { createdAt: 'desc' },
+      take: 24,
+    })).map((m) => ({
+      id: m.id,
+      kind: m.kind,
+      data: m.data,
+      caption: m.caption,
+      createdAt: m.createdAt.toISOString(),
+    })),
   };
 }

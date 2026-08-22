@@ -3,6 +3,8 @@ import { getSession, requireSession, toSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { resolvePermissions } from '@/lib/admin';
 import { appOrigin, makeReferralCode } from '@/lib/referral';
+import { loadShopContext } from '@/lib/shop-access';
+import { ownerShopPrivileges, defaultStaffPrivileges } from '@/lib/shop-privileges';
 
 export const dynamic = 'force-dynamic';
 
@@ -73,7 +75,21 @@ export async function GET() {
     isStaff = session.role === 'ADMIN' || session.role === 'STAFF';
   }
 
-  return NextResponse.json({ user: { ...present(user), isStaff } });
+  let shopPrivileges = ownerShopPrivileges();
+  let isOwner = user.role === 'OWNER';
+  if (user.role === 'SHOP_STAFF' || user.role === 'OWNER') {
+    try {
+      const shop = await loadShopContext();
+      shopPrivileges = shop.privileges;
+      isOwner = shop.isOwner;
+    } catch {
+      if (user.role === 'SHOP_STAFF') shopPrivileges = defaultStaffPrivileges();
+    }
+  }
+
+  return NextResponse.json({
+    user: { ...present(user), isStaff, shopPrivileges, isOwner },
+  });
 }
 
 export async function PATCH(req: NextRequest) {

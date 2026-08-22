@@ -25,6 +25,7 @@ interface Business {
   services: Array<{ id: string; name: string; price: number; duration: number; description: string | null }>;
   staff: Array<{ id: string; name: string; role: string | null }>;
   businessHours: Array<{ day: number; openingTime: string; closingTime: string; isClosed: boolean }>;
+  media?: Array<{ id: string; kind: string; data: string; caption: string | null }>;
 }
 
 export default function BusinessPage({ params }: { params: { slug: string } }) {
@@ -94,12 +95,29 @@ export default function BusinessPage({ params }: { params: { slug: string } }) {
 
       <div className="mx-auto max-w-lg space-y-3 px-4 py-4">
         {tab === 'photos' ? (
-          <div className="overflow-hidden rounded-2xl border bg-white dark:bg-[#16181d]">
-            {business.logo ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={business.logo} alt="" className="h-56 w-full object-cover" />
+          <div className="space-y-3">
+            {(business.media && business.media.length > 0) || business.logo ? (
+              <>
+                {business.media?.map((item) => (
+                  <div key={item.id} className="overflow-hidden rounded-2xl border bg-white dark:bg-[#16181d]">
+                    {item.kind === 'VIDEO' ? (
+                      <video src={item.data} controls className="h-56 w-full object-cover" />
+                    ) : (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={item.data} alt="" className="h-56 w-full object-cover" />
+                    )}
+                    {item.caption ? <p className="p-2 text-center text-xs text-gray-500">{item.caption}</p> : null}
+                  </div>
+                ))}
+                {!business.media?.length && business.logo ? (
+                  <div className="overflow-hidden rounded-2xl border bg-white dark:bg-[#16181d]">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={business.logo} alt="" className="h-56 w-full object-cover" />
+                  </div>
+                ) : null}
+              </>
             ) : (
-              <p className="p-8 text-center text-sm text-gray-500">No photos yet</p>
+              <p className="rounded-2xl border p-8 text-center text-sm text-gray-500">No photos yet</p>
             )}
           </div>
         ) : null}

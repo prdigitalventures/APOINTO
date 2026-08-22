@@ -16,6 +16,15 @@ export default function AdminCrmDetailPage() {
     notes?: string;
     tags?: string;
     businesses?: Array<{ id: string; name: string; slug: string; isActive: boolean }>;
+    shopCrm?: Array<{
+      ownerName: string;
+      notes?: string | null;
+      lastWorkNotes?: string | null;
+      tags?: string | null;
+      address?: string | null;
+      email?: string | null;
+    }>;
+    shopMedia?: Array<{ id: string; kind: string; data: string }>;
   } | null>(null);
   const [notes, setNotes] = useState('');
   const [tags, setTags] = useState('');
@@ -61,6 +70,42 @@ export default function AdminCrmDetailPage() {
       <textarea className="w-full rounded-xl border px-3 py-2 dark:bg-[#0b0d12]" rows={5} value={notes} onChange={(e) => setNotes(e.target.value)} />
       <Button onClick={save}>Save notes</Button>
       {msg ? <p className="text-sm text-indigo-700">{msg}</p> : null}
+
+      {contact.shopCrm?.length ? (
+        <section className="rounded-2xl border p-4">
+          <h2 className="font-semibold">Shop CRM (synced from owners)</h2>
+          {contact.shopCrm.map((row: {
+            ownerName: string;
+            notes?: string | null;
+            lastWorkNotes?: string | null;
+            tags?: string | null;
+            address?: string | null;
+            email?: string | null;
+          }, i: number) => (
+            <article key={i} className="mt-3 text-sm">
+              <p className="font-medium">{row.ownerName}</p>
+              {row.email ? <p>Email: {row.email}</p> : null}
+              {row.address ? <p>Address: {row.address}</p> : null}
+              {row.tags ? <p>Tags: {row.tags}</p> : null}
+              {row.lastWorkNotes ? <p>Last work: {row.lastWorkNotes}</p> : null}
+              {row.notes ? <p>Notes: {row.notes}</p> : null}
+            </article>
+          ))}
+        </section>
+      ) : null}
+
+      {contact.shopMedia?.length ? (
+        <section className="grid grid-cols-2 gap-2">
+          {contact.shopMedia.map((m: { id: string; kind: string; data: string }) =>
+            m.kind === 'VIDEO' ? (
+              <video key={m.id} src={m.data} controls className="h-28 w-full rounded-xl object-cover" />
+            ) : (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img key={m.id} src={m.data} alt="" className="h-28 w-full rounded-xl object-cover" />
+            )
+          )}
+        </section>
+      ) : null}
     </div>
   );
 }

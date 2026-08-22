@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ChevronLeft } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
+import { isShopDashboardRole } from '@/lib/shop-privileges';
 
 export function OwnerSubpageFrame({
   title,
@@ -24,10 +25,10 @@ export function OwnerSubpageFrame({
       router.push('/login');
       return;
     }
-    if (user.role !== 'OWNER') router.push('/customer');
+    if (!isShopDashboardRole(user.role)) router.push('/customer');
   }, [loading, router, user]);
 
-  if (loading || !user || user.role !== 'OWNER') {
+  if (loading || !user || !isShopDashboardRole(user.role)) {
     return <div className="flex min-h-screen items-center justify-center">Loading...</div>;
   }
 
