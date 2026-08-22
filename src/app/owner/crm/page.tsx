@@ -111,7 +111,7 @@ export default function OwnerCrmPage() {
             <UsersRound size={19} />
           </div>
           <div className="min-w-0 flex-1">
-            <h1 className="font-semibold">Customer CRM</h1>
+            <h1 className="font-semibold">Customers</h1>
             <p className="text-xs text-gray-500">Find, call, and remember who booked</p>
           </div>
           <Button size="sm" onClick={() => setShowAdd((v) => !v)}>
@@ -133,7 +133,7 @@ export default function OwnerCrmPage() {
             {error ? <p className="text-sm text-red-600">{error}</p> : null}
             <div className="flex gap-2">
               <Button type="submit" className="flex-1" disabled={saving}>
-                {saving ? 'Saving...' : 'Save to CRM'}
+                {saving ? 'Saving...' : 'Save customer'}
               </Button>
               <Button type="button" variant="ghost" onClick={() => setShowAdd(false)}>
                 Cancel

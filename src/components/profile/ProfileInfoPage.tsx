@@ -57,7 +57,7 @@ function HowTo({ role }: { role: 'OWNER' | 'CUSTOMER' }) {
       <ol className="list-decimal space-y-2 pl-5 text-sm text-gray-600 dark:text-gray-300">
         <li>Open Home and start AI Business Builder, or finish a listing under Business details.</li>
         <li>Add services, prices, staff, and hours. Share the booking link or QR from Home.</li>
-        <li>Use Calendar for the day, Alerts for new bookings, and CRM for customer history.</li>
+        <li>Use Home for analytics, Calendar for the day, Alerts for new bookings, and Customers for history.</li>
         <li>Update shop photo and address in Profile → Business details so customers recognise you.</li>
         <li>
           To add Book on Google Maps: Profile → Business details → Add Book on Google. Copy the Apointo booking URL and
@@ -82,7 +82,7 @@ function Faqs({ role }: { role: 'OWNER' | 'CUSTOMER' }) {
     role === 'OWNER'
       ? [
           ['Is the basic plan really free?', 'Yes. You can go live with a booking page, calendar, and AI setup at no charge.'],
-          ['Can I manage bookings from home?', 'Yes. Calendar, alerts, and CRM work from your phone.'],
+          ['Can I manage bookings from home?', 'Yes. Home, calendar, alerts, and customers work from your phone.'],
           ['How do customers find me?', 'Share your Apointo link or QR. They can also search when they are nearby.'],
           [
             'Can I add a Book button on Google?',

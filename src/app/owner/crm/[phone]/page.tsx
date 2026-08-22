@@ -77,7 +77,7 @@ export default function OwnerCrmProfilePage() {
     return (
       <div className="p-6">
         <Link href="/owner/crm" className="text-sm text-indigo-600">
-          Back to CRM
+          Back to customers
         </Link>
         <p className="mt-4 text-sm text-gray-600">{error}</p>
       </div>
@@ -121,7 +121,7 @@ export default function OwnerCrmProfilePage() {
         <div className="mx-auto max-w-lg">
           <Link href="/owner/crm" className="mb-2 inline-flex items-center gap-1 text-sm font-medium text-indigo-600">
             <ChevronLeft size={16} />
-            CRM
+            Customers
           </Link>
           <h1 className="font-semibold">{customer.name}</h1>
           <p className="text-xs text-gray-500">

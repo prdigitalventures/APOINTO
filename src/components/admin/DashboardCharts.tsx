@@ -112,9 +112,11 @@ export function GroupedBarChart({
 export function AreaLineChart({
   labels,
   series,
+  className = 'h-64 w-full',
 }: {
   labels: string[];
   series: Array<{ label: string; color: string; values: number[] }>;
+  className?: string;
 }) {
   const w = 720;
   const h = 260;
@@ -128,7 +130,7 @@ export function AreaLineChart({
   const ticks = 4;
 
   return (
-    <svg viewBox={`0 0 ${w} ${h}`} className="h-64 w-full" role="img" aria-label="Bookings and shops over time">
+    <svg viewBox={`0 0 ${w} ${h}`} className={className} role="img" aria-label="Bookings and shops over time">
       <defs>
         {series.map((s, i) => (
           <linearGradient key={s.label} id={`area-${i}`} x1="0" y1="0" x2="0" y2="1">

@@ -6,9 +6,9 @@ import {
   Bell,
   CalendarDays,
   ChevronsUpDown,
+  ClipboardList,
   Home,
   UserRound,
-  UsersRound,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useState } from 'react';
@@ -64,8 +64,8 @@ const customerItems: NavItem[] = [
 const ownerItems: NavItem[] = [
   { href: '/owner', label: 'Home', icon: Home, exact: true },
   { href: '/owner/calendar', label: 'Calendar', icon: CalendarDays },
+  { href: '/owner/bookings', label: 'Bookings', icon: ClipboardList },
   { href: '/owner/notifications', label: 'Alerts', icon: Bell },
-  { href: '/owner/crm', label: 'CRM', icon: UsersRound },
   { href: '/owner/profile', label: 'Profile', icon: UserRound },
 ];
 
