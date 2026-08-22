@@ -39,8 +39,9 @@ export async function GET(req: NextRequest) {
   const state = req.nextUrl.searchParams.get('state');
   const cookieStore = await cookies();
   const expectedState = cookieStore.get('google_oauth_state')?.value;
-  const role = parseAuthIntentRole(cookieStore.get('google_oauth_role')?.value) as UserRole;
-  const next = authDestination(cookieStore.get('google_oauth_next')?.value, role);
+  const intentRole = parseAuthIntentRole(cookieStore.get('google_oauth_role')?.value);
+  const role = intentRole as UserRole;
+  const next = authDestination(cookieStore.get('google_oauth_next')?.value, intentRole);
   const entry = cookieStore.get('google_oauth_entry')?.value === 'register' ? 'register' : 'login';
 
   cookieStore.delete('google_oauth_state');

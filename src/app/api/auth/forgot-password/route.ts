@@ -12,7 +12,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       ok: true,
       message: 'If that email is registered, we sent a password reset link.',
-      ...(process.env.NODE_ENV !== 'production' && result.resetUrl ? { resetUrl: result.resetUrl } : {}),
+      ...(process.env.NODE_ENV !== 'production' && 'resetUrl' in result && result.resetUrl
+        ? { resetUrl: result.resetUrl }
+        : {}),
     });
   } catch (error) {
     return NextResponse.json({ error: (error as Error).message }, { status: 400 });

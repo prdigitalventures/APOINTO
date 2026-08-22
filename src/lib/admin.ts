@@ -73,7 +73,7 @@ export async function bootstrapStaffUser(user: {
   await prisma.user.update({
     where: { id: user.id },
     data: {
-      role: nextRole === 'CUSTOMER' ? 'ADMIN' : nextRole,
+      role: nextRole,
       staffRoleId: superRole?.id,
     },
   });
