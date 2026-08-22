@@ -1,0 +1,95 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --foreground: #111827;
+  --background: #f9fafb;
+}
+
+html.dark {
+  color-scheme: dark;
+  --foreground: #f3f4f6;
+  --background: #0b0d12;
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  font-family: 'Inter', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+@layer utilities {
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+@keyframes apointo-alert-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.25;
+    transform: scale(1.45);
+  }
+}
+
+.apointo-alert-dot {
+  animation: apointo-alert-pulse 1.1s ease-in-out infinite;
+}
+
+@media print {
+  @page {
+    size: 80mm auto;
+    margin: 4mm;
+  }
+
+  html,
+  body {
+    background: #fff !important;
+    color: #111 !important;
+  }
+
+  body.receipt-print-mode .no-print,
+  body.receipt-print-mode .receipt-modal-chrome,
+  body.receipt-print-mode header,
+  body.receipt-print-mode nav {
+    display: none !important;
+  }
+
+  body.receipt-print-mode .receipt-overlay {
+    position: static !important;
+    background: transparent !important;
+    display: block !important;
+  }
+
+  body.receipt-print-mode .thermal-receipt {
+    width: 72mm;
+    max-width: 72mm;
+    box-shadow: none;
+    background: #fff !important;
+  }
+
+  body.idcard-print-mode .no-print,
+  body.idcard-print-mode .receipt-modal-chrome,
+  body.idcard-print-mode header,
+  body.idcard-print-mode nav {
+    display: none !important;
+  }
+
+  body.idcard-print-mode .receipt-overlay {
+    position: static !important;
+    background: transparent !important;
+    display: block !important;
+  }
+
+  body.idcard-print-mode .staff-id-card {
+    box-shadow: none;
+  }
+}

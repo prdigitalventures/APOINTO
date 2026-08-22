@@ -1,0 +1,417 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-3.0.x", "debian-openssl-3.0.x", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id                       String    @id @default(cuid())
+  name                     String
+  phone                    String    @unique
+  email                    String    @unique
+  role                     String    @default("CUSTOMER")
+  password                 String
+  googleId                 String?   @unique
+  emailVerifiedAt          DateTime?
+  emailVerifyTokenHash     String?
+  emailVerifyExpiresAt     DateTime?
+  passwordResetTokenHash   String?
+  passwordResetExpiresAt   DateTime?
+  avatar                   String?
+  rewardPoints             Int       @default(0)
+  referralCode             String?   @unique
+  isActive                 Boolean   @default(true)
+  disabledReason           String?
+  lastLoginAt              DateTime?
+  createdAt                DateTime  @default(now())
+  updatedAt                DateTime  @updatedAt
+
+  businesses           Business[]
+  bookings             Booking[]           @relation("CustomerBookings")
+  notifications        Notification[]
+  onboardingSessions   OnboardingSession[]
+  feedback             Feedback[]
+  crmContacts          CrmContact[]
+  customerMedia        CustomerMedia[]
+  shopStaffLogin       Staff[]             @relation("ShopStaffLogin")
+  staffProfile         StaffProfile?
+  staffRole            Role?               @relation(fields: [staffRoleId], references: [id])
+  staffRoleId          String?
+  permissionOverrides  StaffPermissionOverride[]
+  platformContact      PlatformContact?
+  campaignsCreated     Campaign[]
+  audits               AdminAudit[]        @relation("AuditActor")
+}
+
+model Business {
+  id                 String   @id @default(cuid())
+  ownerId            String
+  name               String
+  slug               String   @unique
+  category           String
+  description        String?
+  location           String?
+  latitude           Float?
+  longitude          Float?
+  timezone           String   @default("Asia/Kolkata")
+  logo               String?
+  about              String?
+  uniqueCode         String?  @unique
+  contactPhone       String?
+  bookingSchema      String?
+  bookingRules       String?
+  advanceBookingDays Int      @default(30)
+  cancellationHours  Int      @default(2)
+  bufferMinutes      Int      @default(0)
+  isActive           Boolean  @default(true)
+  disabledReason     String?
+  googleBookLinkedAt DateTime?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  ownerUser     User          @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  services      Service[]
+  staff         Staff[]
+  media         ShopMedia[]
+  businessHours BusinessHour[]
+  breaks        Break[]
+  holidays      Holiday[]
+  blockedSlots  BlockedSlot[]
+  bookings      Booking[]
+}
+
+model Service {
+  id           String  @id @default(cuid())
+  businessId   String
+  name         String
+  description  String?
+  price        Float   @default(0)
+  duration     Int
+  bufferBefore Int     @default(0)
+  bufferAfter  Int     @default(0)
+  isActive     Boolean @default(true)
+  sortOrder    Int     @default(0)
+  metadata     String?
+
+  business      Business       @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  staffServices StaffService[]
+  bookings      Booking[]
+}
+
+model Staff {
+  id           String  @id @default(cuid())
+  businessId   String
+  name         String
+  role         String?
+  isActive     Boolean @default(true)
+  metadata     String?
+  phone        String?
+  email        String?
+  bio          String?
+  photo        String?
+  employeeCode String? @unique
+  userId       String? @unique
+  privileges   String?
+
+  business      Business       @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  loginUser     User?          @relation("ShopStaffLogin", fields: [userId], references: [id], onDelete: SetNull)
+  staffServices StaffService[]
+  staffHours    StaffHour[]
+  bookings      Booking[]
+}
+
+model ShopMedia {
+  id         String   @id @default(cuid())
+  businessId String
+  kind       String
+  data       String
+  caption    String?
+  createdAt  DateTime @default(now())
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([businessId])
+}
+
+model StaffService {
+  id        String @id @default(cuid())
+  staffId   String
+  serviceId String
+
+  staff   Staff   @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  service Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  @@unique([staffId, serviceId])
+}
+
+model BusinessHour {
+  id          String  @id @default(cuid())
+  businessId  String
+  day         Int
+  openingTime String
+  closingTime String
+  isClosed    Boolean @default(false)
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@unique([businessId, day])
+}
+
+model StaffHour {
+  id          String  @id @default(cuid())
+  staffId     String
+  day         Int
+  openingTime String
+  closingTime String
+  isClosed    Boolean @default(false)
+
+  staff Staff @relation(fields: [staffId], references: [id], onDelete: Cascade)
+
+  @@unique([staffId, day])
+}
+
+model Break {
+  id         String  @id @default(cuid())
+  businessId String
+  day        Int?
+  startTime  String
+  endTime    String
+  label      String?
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+}
+
+model Holiday {
+  id         String   @id @default(cuid())
+  businessId String
+  date       DateTime
+  label      String?
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+}
+
+model BlockedSlot {
+  id         String   @id @default(cuid())
+  businessId String
+  staffId    String?
+  date       DateTime
+  startTime  String
+  endTime    String
+  reason     String?
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+}
+
+model Booking {
+  id              String   @id @default(cuid())
+  businessId      String
+  customerId      String?
+  serviceId       String
+  staffId         String?
+  customerName    String
+  customerPhone   String
+  date            DateTime
+  startTime       String
+  endTime         String
+  status          String   @default("PENDING")
+  isWalkIn        Boolean  @default(false)
+  rejectionReason String?
+  customData      String?
+  notes           String?
+  receiptNumber   String?  @unique
+  paidAt          DateTime?
+  paymentMode     String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  business        Business         @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  customer        User?            @relation("CustomerBookings", fields: [customerId], references: [id])
+  service         Service          @relation(fields: [serviceId], references: [id])
+  staff           Staff?           @relation(fields: [staffId], references: [id])
+  bookingRequests BookingRequest[]
+  timeRequests    TimeRequest[]
+}
+
+model BookingRequest {
+  id            String   @id @default(cuid())
+  bookingId     String
+  requestedBy   String
+  requestedDate DateTime?
+  requestedTime String?
+  status        String   @default("PENDING")
+  message       String?
+  createdAt     DateTime @default(now())
+
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+}
+
+model TimeRequest {
+  id                String   @id @default(cuid())
+  bookingId         String
+  requestedBy       String
+  additionalMinutes Int
+  status            String   @default("PENDING")
+  newStartTime      String?
+  createdAt         DateTime @default(now())
+
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String
+  title     String
+  message   String
+  data      String?
+  status    String   @default("UNREAD")
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model OnboardingSession {
+  id        String   @id @default(cuid())
+  userId    String
+  state     String
+  completed Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Feedback {
+  id        String   @id @default(cuid())
+  userId    String
+  message   String
+  rating    Int?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model CrmContact {
+  id              String   @id @default(cuid())
+  ownerId         String
+  phone           String
+  name            String
+  notes           String?
+  statusOverride  String?
+  email           String?
+  address         String?
+  birthday        String?
+  tags            String?
+  lastWorkNotes   String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  owner User @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@unique([ownerId, phone])
+  @@index([ownerId])
+}
+
+model CustomerMedia {
+  id        String   @id @default(cuid())
+  ownerId   String
+  phone     String
+  kind      String
+  data      String
+  caption   String?
+  createdAt DateTime @default(now())
+
+  owner User @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@index([ownerId, phone])
+}
+
+model StaffProfile {
+  id         String  @id @default(cuid())
+  userId     String  @unique
+  department String  @default("OPS")
+  isActive   Boolean @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Role {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  isSystem    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  permissions RolePermission[]
+  users       User[]
+}
+
+model RolePermission {
+  id      String @id @default(cuid())
+  roleId  String
+  feature String
+  level   String @default("NONE")
+
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, feature])
+}
+
+model StaffPermissionOverride {
+  id      String @id @default(cuid())
+  userId  String
+  feature String
+  level   String
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, feature])
+}
+
+model PlatformContact {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  notes     String?
+  tags      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Campaign {
+  id             String    @id @default(cuid())
+  name           String
+  subject        String
+  body           String
+  audience       String    @default("ALL")
+  status         String    @default("DRAFT")
+  recipientCount Int       @default(0)
+  sentAt         DateTime?
+  createdById    String
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  createdBy User @relation(fields: [createdById], references: [id], onDelete: Cascade)
+}
+
+model AdminAudit {
+  id         String   @id @default(cuid())
+  actorId    String
+  action     String
+  targetType String
+  targetId   String?
+  metadata   String?
+  createdAt  DateTime @default(now())
+
+  actor User @relation("AuditActor", fields: [actorId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+}

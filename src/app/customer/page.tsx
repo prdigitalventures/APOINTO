@@ -1,0 +1,325 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { useAuth } from '@/components/AuthProvider';
+import { Button } from '@/components/ui/Button';
+import { StatusChip } from '@/components/ui/StatusChip';
+import { CustomerAssistantBar } from '@/components/CustomerAssistantBar';
+import { formatTime12h, CATEGORIES } from '@/lib/utils';
+import { getCategoryDisplayName } from '@/lib/booking-schema';
+import { format, isToday, isTomorrow } from 'date-fns';
+import { LogOut, MapPin, Navigation } from 'lucide-react';
+
+interface Booking {
+  id: string;
+  date: string;
+  startTime: string;
+  status: string;
+  service: { name: string };
+  staff: { name: string } | null;
+  business: { name: string; slug: string; category: string };
+}
+
+interface DiscoveredBusiness {
+  id: string;
+  name: string;
+  slug: string;
+  category: string;
+  location: string | null;
+  distanceKm?: number;
+  services: Array<{ name: string; price: number }>;
+}
+
+interface LocationState {
+  city: string;
+  latitude?: number;
+  longitude?: number;
+  label: string;
+}
+
+const CITY_PRESETS = ['Bangalore', 'Mumbai', 'Delhi', 'Hyderabad', 'Chennai', 'Pune'];
+
+export default function CustomerHome() {
+  const { user, loading, logout, refresh } = useAuth();
+  const [resendState, setResendState] = useState('');
+  const router = useRouter();
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [location, setLocation] = useState<LocationState>({ city: '', label: 'Set location' });
+  const [cityInput, setCityInput] = useState('');
+  const [businesses, setBusinesses] = useState<DiscoveredBusiness[]>([]);
+  const [category, setCategory] = useState<string | null>(null);
+  const [locating, setLocating] = useState(false);
+
+  useEffect(() => {
+    if (!loading && !user) router.push('/login');
+    if (!loading && user && user.role === 'OWNER') router.push('/owner');
+  }, [user, loading, router]);
+
+  useEffect(() => {
+    const saved = typeof window !== 'undefined' ? localStorage.getItem('apointo-location') : null;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved) as LocationState;
+        setLocation(parsed);
+        setCityInput(parsed.city);
+      } catch {
+        /* ignore */
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    if (user) {
+      fetch('/api/bookings').then((r) => r.json()).then((d) => setBookings(d.bookings || []));
+    }
+  }, [user]);
+
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (location.city) params.set('city', location.city);
+    if (category) params.set('category', category);
+    if (location.latitude != null) params.set('lat', String(location.latitude));
+    if (location.longitude != null) params.set('lng', String(location.longitude));
+    fetch(`/api/discover?${params.toString()}`)
+      .then((r) => r.json())
+      .then((d) => setBusinesses(d.businesses || []));
+  }, [location, category]);
+
+  const saveLocation = (next: LocationState) => {
+    setLocation(next);
+    localStorage.setItem('apointo-location', JSON.stringify(next));
+  };
+
+  const applyCity = (city: string) => {
+    const next = { city, label: city };
+    setCityInput(city);
+    saveLocation(next);
+  };
+
+  const useLiveLocation = () => {
+    if (!navigator.geolocation) return;
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const latitude = pos.coords.latitude;
+        const longitude = pos.coords.longitude;
+        let city = 'Near me';
+        try {
+          const geo = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`,
+            { headers: { 'Accept-Language': 'en' } }
+          );
+          const data = await geo.json();
+          city =
+            data.address?.city ||
+            data.address?.town ||
+            data.address?.state_district ||
+            data.address?.state ||
+            'Near me';
+        } catch {
+          /* keep Near me */
+        }
+        saveLocation({ city, latitude, longitude, label: `Near ${city}` });
+        setCityInput(city);
+        setLocating(false);
+      },
+      () => setLocating(false),
+      { enableHighAccuracy: true, timeout: 12000 }
+    );
+  };
+
+  const formatDate = (dateStr: string, time: string) => {
+    const date = new Date(dateStr);
+    if (isToday(date)) return `Today · ${formatTime12h(time)}`;
+    if (isTomorrow(date)) return `Tomorrow · ${formatTime12h(time)}`;
+    return `${format(date, 'EEE, MMM d')} · ${formatTime12h(time)}`;
+  };
+
+  const pastBusinesses = Array.from(new Map(bookings.map((b) => [b.business.slug, b.business])).values());
+
+  if (loading || !user) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+
+  return (
+    <div className="min-h-screen pb-24">
+      <header className="bg-white px-4 py-6 space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-gray-500">Hi, {user.name.split(' ')[0]} 👋</p>
+            <h1 className="text-xl font-bold">What do you want to book?</h1>
+          </div>
+          <Button variant="ghost" size="sm" onClick={logout}><LogOut size={18} /></Button>
+        </div>
+
+        {user && !user.emailVerified && (
+          <div className="bg-amber-50 border border-amber-100 text-amber-800 text-sm rounded-xl p-3">
+            <p>Verify your email to book appointments. You can still browse businesses and available times.</p>
+            <button
+              type="button"
+              className="mt-2 text-indigo-700 font-medium"
+              onClick={async () => {
+                const res = await fetch('/api/auth/resend-verification', { method: 'POST' });
+                const data = await res.json();
+                setResendState(data.error || 'Verification email sent. Check your inbox.');
+                await refresh();
+              }}
+            >
+              Resend verification email
+            </button>
+            {resendState && <p className="text-xs mt-1">{resendState}</p>}
+          </div>
+        )}
+
+        <div className="flex items-center gap-2 overflow-x-auto pb-1">
+          <span className="flex items-center gap-1 text-xs text-indigo-700 bg-indigo-50 rounded-full px-3 py-1.5 whitespace-nowrap">
+            <MapPin size={12} /> {location.label}
+          </span>
+          <button
+            type="button"
+            onClick={useLiveLocation}
+            className="flex items-center gap-1 text-xs bg-white border rounded-full px-3 py-1.5 whitespace-nowrap"
+          >
+            <Navigation size={12} /> {locating ? 'Locating…' : 'Allow my location'}
+          </button>
+        </div>
+
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (cityInput.trim()) applyCity(cityInput.trim());
+          }}
+          className="flex gap-2"
+        >
+          <input
+            className="flex-1 bg-gray-100 rounded-xl px-3 py-2 text-sm"
+            placeholder="Update location, e.g. Bangalore"
+            value={cityInput}
+            onChange={(e) => setCityInput(e.target.value)}
+          />
+          <Button type="submit" size="sm">Update</Button>
+        </form>
+        <div className="flex gap-2 overflow-x-auto">
+          {CITY_PRESETS.map((city) => (
+            <button
+              key={city}
+              type="button"
+              onClick={() => applyCity(city)}
+              className={`text-xs rounded-full px-3 py-1 border ${location.city === city ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white'}`}
+            >
+              {city}
+            </button>
+          ))}
+        </div>
+
+        <CustomerAssistantBar
+          location={location}
+          onNavigateBooking={(id) => router.push(`/customer/bookings/${id}`)}
+        />
+      </header>
+
+      <main className="px-4 space-y-6">
+        {bookings.length > 0 && (
+          <section>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="font-semibold">Upcoming</h2>
+              <Link href="/customer/bookings" className="text-sm text-indigo-600">View all</Link>
+            </div>
+            <div className="space-y-3">
+              {bookings.slice(0, 3).map((booking) => (
+                <Link key={booking.id} href={`/customer/bookings/${booking.id}`}>
+                  <div className="bg-white rounded-2xl border p-4">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <h3 className="font-semibold">{booking.business.name}</h3>
+                        <p className="text-sm text-gray-600">
+                          {booking.service.name}
+                          {booking.staff && ` with ${booking.staff.name}`}
+                        </p>
+                        <p className="text-sm text-indigo-600 mt-1">{formatDate(booking.date, booking.startTime)}</p>
+                      </div>
+                      <StatusChip status={booking.status} />
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {pastBusinesses.length > 0 && (
+          <section>
+            <h2 className="font-semibold mb-3">Book Again</h2>
+            <div className="space-y-3">
+              {pastBusinesses.map((biz) => (
+                <div key={biz.slug} className="bg-white rounded-2xl border p-4 flex items-center justify-between">
+                  <div>
+                    <h3 className="font-semibold">{biz.name}</h3>
+                    <p className="text-sm text-gray-500">{getCategoryDisplayName(biz.category)}</p>
+                  </div>
+                  <Link href={`/${biz.slug}/book`}>
+                    <Button size="sm">Book Again</Button>
+                  </Link>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        <section>
+          <h2 className="font-semibold mb-3">Explore</h2>
+          <div className="flex max-h-64 flex-wrap gap-2 overflow-y-auto">
+            {CATEGORIES.map((cat) => (
+              <button
+                key={cat.id}
+                type="button"
+                onClick={() => setCategory(category === cat.id ? null : cat.id)}
+                className={`rounded-full border bg-white px-3 py-1.5 text-center text-xs ${category === cat.id ? 'border-indigo-500 ring-2 ring-indigo-100' : ''}`}
+              >
+                <span className="mr-1">{cat.icon}</span>
+                {cat.name}
+              </button>
+            ))}
+          </div>
+        </section>
+
+        <section>
+          <h2 className="font-semibold mb-3">
+            {location.city ? `Available in ${location.city}` : 'Available businesses'}
+            {category ? ` · ${CATEGORIES.find((c) => c.id === category)?.name}` : ''}
+          </h2>
+          {businesses.length === 0 ? (
+            <p className="text-sm text-gray-500">No businesses found for this location yet. Try Bangalore to see demo listings.</p>
+          ) : (
+            <div className="space-y-3">
+              {businesses.map((biz) => (
+                <Link key={biz.id} href={`/${biz.slug}`}>
+                  <div className="bg-white rounded-2xl border p-4">
+                    <div className="flex justify-between">
+                      <div>
+                        <h3 className="font-semibold">{biz.name}</h3>
+                        <p className="text-sm text-gray-500">
+                          {getCategoryDisplayName(biz.category)}
+                          {biz.location ? ` · ${biz.location}` : ''}
+                        </p>
+                        {biz.services?.[0] && (
+                          <p className="text-xs text-gray-500 mt-1">
+                            {biz.services.map((s) => s.name).join(', ')}
+                          </p>
+                        )}
+                      </div>
+                      {biz.distanceKm != null && (
+                        <span className="text-xs text-indigo-600">{biz.distanceKm} km</span>
+                      )}
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+        </section>
+      </main>
+
+    </div>
+  );
+}

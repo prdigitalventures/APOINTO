@@ -1,13 +1,56 @@
 {
   "name": "apointo",
-  "private": true,
   "version": "0.1.0",
+  "private": true,
   "description": "Universal AI-Powered Booking Platform for Indian SMBs",
   "packageManager": "pnpm@9.15.4",
   "scripts": {
-    "dev": "pnpm -r --parallel run dev",
-    "build": "pnpm -r run build",
-    "test": "pnpm -r run test",
-    "db:prepare": "pnpm --filter @apointo/server db:prepare"
+    "dev": "next dev",
+    "build": "prisma generate && next build",
+    "start": "next start",
+    "lint": "next lint",
+    "db:migrate": "prisma migrate dev",
+    "db:seed": "npx tsx prisma/seed.ts",
+    "seed": "npx tsx prisma/seed.ts",
+    "workspace:dev": "pnpm --parallel --filter @apointo/server --filter @apointo/frontend run dev",
+    "workspace:build": "pnpm --filter @apointo/server --filter @apointo/frontend run build",
+    "workspace:test": "pnpm --filter @apointo/server --filter @apointo/frontend run test",
+    "db:prepare": "pnpm --filter @apointo/server db:prepare",
+    "postinstall": "prisma generate"
+  },
+  "prisma": {
+    "seed": "npx tsx prisma/seed.ts"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.22.0",
+    "bcryptjs": "^3.0.3",
+    "clsx": "^2.1.1",
+    "date-fns": "^4.4.0",
+    "jose": "^6.2.9",
+    "lucide-react": "^1.33.0",
+    "nanoid": "^6.0.1",
+    "next": "14.2.35",
+    "nodemailer": "^7.0.11",
+    "prisma": "^5.22.0",
+    "qrcode": "^1.5.4",
+    "react": "^18",
+    "react-dom": "^18",
+    "tailwind-merge": "^3.6.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/node": "^20",
+    "@types/nodemailer": "^6.4.17",
+    "@types/qrcode": "^1.5.6",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "dotenv": "^16.4.7",
+    "eslint": "^8",
+    "eslint-config-next": "14.2.35",
+    "postcss": "^8",
+    "tailwindcss": "^3.4.1",
+    "tsx": "^4.19.3",
+    "typescript": "^5"
   }
 }
