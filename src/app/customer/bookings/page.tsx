@@ -14,6 +14,7 @@ interface Booking {
   date: string;
   startTime: string;
   status: string;
+  paidAt?: string | null;
   service: { name: string };
   staff: { name: string } | null;
   business: { name: string; slug: string };
@@ -30,7 +31,7 @@ export default function CustomerBookingsPage() {
 
   useEffect(() => {
     if (user) {
-      fetch('/api/bookings').then((r) => r.json()).then((d) => setBookings(d.bookings || []));
+      fetch('/api/bookings?scope=all').then((r) => r.json()).then((d) => setBookings(d.bookings || []));
     }
   }, [user]);
 
@@ -51,12 +52,12 @@ export default function CustomerBookingsPage() {
       </header>
       <div className="p-4 space-y-3">
         {bookings.length === 0 ? (
-          <div className="text-center py-12 text-gray-500">No upcoming bookings</div>
+          <div className="text-center py-12 text-gray-500">No bookings yet</div>
         ) : (
           bookings.map((booking) => (
             <Link key={booking.id} href={`/customer/bookings/${booking.id}`}>
               <div className="bg-white rounded-2xl border p-4 mb-3">
-                <div className="flex items-start justify-between">
+                <div className="flex items-start justify-between gap-2">
                   <div>
                     <h3 className="font-semibold">{booking.business.name}</h3>
                     <p className="text-sm text-gray-600">
@@ -65,7 +66,14 @@ export default function CustomerBookingsPage() {
                     </p>
                     <p className="text-sm text-indigo-600 mt-1">{formatDate(booking.date, booking.startTime)}</p>
                   </div>
-                  <StatusChip status={booking.status} />
+                  <div className="flex flex-col items-end gap-1">
+                    <StatusChip status={booking.status} />
+                    {booking.paidAt ? (
+                      <span className="rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-700">
+                        Receipt
+                      </span>
+                    ) : null}
+                  </div>
                 </div>
               </div>
             </Link>

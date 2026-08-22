@@ -26,6 +26,8 @@ import {
   startOfWeek,
 } from 'date-fns';
 import { ArrowLeft, ChevronLeft, ChevronRight, Plus, Clock } from 'lucide-react';
+import { BookingReceiptModal } from '@/components/BookingReceipt';
+import { toReceiptView, type ReceiptView } from '@/lib/receipt-format';
 
 const WEEK_STARTS_ON = 1 as const; // Monday — ISO / India
 const WEEKDAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -45,8 +47,12 @@ interface Booking {
   status: string;
   isWalkIn: boolean;
   createdAt?: string;
+  receiptNumber?: string | null;
+  paidAt?: string | null;
+  paymentMode?: string | null;
   service: { name: string; price: number };
   staff: { name: string } | null;
+  business?: { name: string; location: string | null };
 }
 
 function CalendarContent() {
@@ -62,6 +68,8 @@ function CalendarContent() {
   const [showWalkIn, setShowWalkIn] = useState(false);
   const [showShare, setShowShare] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [receipt, setReceipt] = useState<ReceiptView | null>(null);
+  const [payModeById, setPayModeById] = useState<Record<string, string>>({});
 
   const today = useMemo(() => new Date(), []);
   const minJumpMonth = startOfMonth(today);
@@ -156,17 +164,38 @@ function CalendarContent() {
   const handleAction = async (bookingId: string, action: string, extra?: Record<string, unknown>) => {
     setActionLoading(bookingId);
     try {
-      await fetch(`/api/bookings/${bookingId}`, {
+      const patchRes = await fetch(`/api/bookings/${bookingId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action, ...extra }),
       });
+      const patchData = await patchRes.json();
       const res = await fetch(`/api/bookings?businessId=${businessId}&role=owner`);
       const data = await res.json();
       setBookings(data.bookings || []);
+      if (action === 'mark_paid' || action === 'ensure_receipt') {
+        const view = patchData.booking ? toReceiptView(patchData.booking) : null;
+        if (view) setReceipt(view);
+      }
     } finally {
       setActionLoading(null);
     }
+  };
+
+  const fallbackBusiness = {
+    name: business?.name || active?.name || 'Business',
+    location: active?.location ?? null,
+  };
+
+  const openSavedReceipt = (booking: Booking) => {
+    const view = toReceiptView({
+      ...booking,
+      receiptNumber: booking.receiptNumber || null,
+      paidAt: booking.paidAt || null,
+      paymentMode: booking.paymentMode || null,
+      business: booking.business || fallbackBusiness,
+    });
+    if (view) setReceipt(view);
   };
 
   if (loading || !user) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
@@ -407,10 +436,15 @@ function CalendarContent() {
               <div key={booking.id} className="bg-white rounded-2xl border p-4">
                 <div className="flex items-start justify-between mb-2">
                   <div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <span className="font-semibold">{formatTime12h(booking.startTime)}</span>
                       <StatusChip status={booking.status} />
                       {booking.isWalkIn && <span className="text-xs bg-gray-100 px-2 py-0.5 rounded">Walk-in</span>}
+                      {booking.paidAt ? (
+                        <span className="rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-800">
+                          PAID
+                        </span>
+                      ) : null}
                     </div>
                     <p className="text-sm text-gray-900 mt-1">{booking.customerName}</p>
                     <p className="text-sm text-gray-500">
@@ -445,6 +479,49 @@ function CalendarContent() {
                   </div>
                 )}
 
+                {!['PENDING', 'CANCELLED', 'REJECTED'].includes(booking.status) && (
+                  <div className="mt-3 space-y-2">
+                    {booking.paidAt ? (
+                      <Button size="sm" variant="outline" onClick={() => openSavedReceipt(booking)}>
+                        View receipt
+                      </Button>
+                    ) : (
+                      <div className="flex flex-wrap items-center gap-2">
+                        <select
+                          className="rounded-xl border px-2 py-1.5 text-sm"
+                          value={payModeById[booking.id] || booking.paymentMode || 'offline'}
+                          onChange={(e) => setPayModeById((prev) => ({ ...prev, [booking.id]: e.target.value }))}
+                        >
+                          <option value="offline">Offline</option>
+                          <option value="online">Online</option>
+                          <option value="upi">UPI</option>
+                          <option value="cash">Cash</option>
+                          <option value="card">Card</option>
+                        </select>
+                        <Button
+                          size="sm"
+                          disabled={actionLoading === booking.id}
+                          onClick={() =>
+                            handleAction(booking.id, 'mark_paid', {
+                              paymentMode: payModeById[booking.id] || booking.paymentMode || 'offline',
+                            })
+                          }
+                        >
+                          Mark as paid
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          disabled={actionLoading === booking.id}
+                          onClick={() => handleAction(booking.id, 'ensure_receipt')}
+                        >
+                          Preview receipt
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {(booking.status === 'TIME_UPDATE_REQUESTED' || booking.status === 'CUSTOMER_TIME_REQUESTED') && (
                   <div className="flex gap-2 mt-3">
                     <Button size="sm" onClick={() => handleAction(booking.id, 'accept_time_request')}>Accept</Button>
@@ -455,6 +532,13 @@ function CalendarContent() {
             ))
         )}
       </div>
+
+      <BookingReceiptModal
+        open={Boolean(receipt)}
+        receipt={receipt}
+        onClose={() => setReceipt(null)}
+        sharePhone={receipt?.customerPhone}
+      />
 
       {showWalkIn && businessId && (
         <WalkInModal

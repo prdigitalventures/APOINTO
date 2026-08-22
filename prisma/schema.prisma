@@ -199,6 +199,9 @@ model Booking {
   rejectionReason String?
   customData      String?
   notes           String?
+  receiptNumber   String?  @unique
+  paidAt          DateTime?
+  paymentMode     String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 

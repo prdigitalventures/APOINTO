@@ -10,6 +10,8 @@ import { TimeRequestButtons } from '@/components/TimeRequestButtons';
 import { formatTime12h, formatCurrency } from '@/lib/utils';
 import { format } from 'date-fns';
 import { ArrowLeft } from 'lucide-react';
+import { BookingReceiptModal } from '@/components/BookingReceipt';
+import { toReceiptView, type ReceiptView } from '@/lib/receipt-format';
 
 interface BookingDetail {
   id: string;
@@ -18,6 +20,10 @@ interface BookingDetail {
   endTime: string;
   status: string;
   customerName: string;
+  customerPhone?: string;
+  receiptNumber?: string | null;
+  paidAt?: string | null;
+  paymentMode?: string | null;
   service: { name: string; price: number };
   staff: { name: string } | null;
   business: { name: string; slug: string; location: string | null };
@@ -29,6 +35,7 @@ export default function BookingDetailPage() {
   const params = useParams();
   const [booking, setBooking] = useState<BookingDetail | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
+  const [receipt, setReceipt] = useState<ReceiptView | null>(null);
 
   useEffect(() => {
     if (!loading && !user) router.push('/login');
@@ -80,6 +87,24 @@ export default function BookingDetailPage() {
             {format(new Date(booking.date), 'EEE, MMM d')} · {formatTime12h(booking.startTime)}
           </p>
           <p className="text-sm text-gray-500 mt-1">{formatCurrency(booking.service.price)}</p>
+          {booking.paidAt && (
+            <Button
+              className="mt-4"
+              variant="outline"
+              onClick={() => {
+                const view = toReceiptView({
+                  ...booking,
+                  receiptNumber: booking.receiptNumber || null,
+                  paidAt: booking.paidAt || null,
+                  paymentMode: booking.paymentMode || null,
+                  customerPhone: booking.customerPhone || user?.phone || '',
+                });
+                if (view) setReceipt(view);
+              }}
+            >
+              View receipt
+            </Button>
+          )}
         </div>
 
         {booking.status === 'PENDING' && (
@@ -120,6 +145,13 @@ export default function BookingDetailPage() {
           </div>
         )}
       </div>
+
+      <BookingReceiptModal
+        open={Boolean(receipt)}
+        receipt={receipt}
+        onClose={() => setReceipt(null)}
+        sharePhone={user?.phone || booking.customerPhone}
+      />
     </div>
   );
 }

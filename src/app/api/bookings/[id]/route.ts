@@ -15,13 +15,21 @@ import {
 } from '@/lib/notifications';
 import { getAlternativeSlots, calculateEndTime } from '@/lib/availability';
 import { addMinutesToTime } from '@/lib/utils';
+import { allocateReceiptNumber, ensureReceiptNumber } from '@/lib/receipt-code';
+
+function canManageBooking(
+  session: { id: string; role: string },
+  ownerId: string
+): boolean {
+  return session.role === 'ADMIN' || session.id === ownerId;
+}
 
 export async function PATCH(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    await requireSession();
+    const session = await requireSession();
     const body = await req.json();
     const { action, reason, suggestedTime, additionalMinutes, rejectionReasonId } = body;
 
@@ -142,6 +150,37 @@ export async function PATCH(
           data: { status: 'COMPLETED' },
         });
         await notifyBookingCompleted(params.id);
+        return NextResponse.json({ booking: updated });
+      }
+
+      case 'mark_paid': {
+        if (!canManageBooking(session, booking.business.ownerId)) {
+          return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+        }
+        const receiptNumber = booking.receiptNumber || (await allocateReceiptNumber(booking.createdAt));
+        const requestedMode = typeof body.paymentMode === 'string' ? body.paymentMode.trim().slice(0, 40) : '';
+        const paymentMode = requestedMode || booking.paymentMode || 'offline';
+        const updated = await prisma.booking.update({
+          where: { id: params.id },
+          data: {
+            receiptNumber,
+            paymentMode,
+            paidAt: booking.paidAt || new Date(),
+          },
+          include: { service: true, staff: true, business: true },
+        });
+        return NextResponse.json({ booking: updated });
+      }
+
+      case 'ensure_receipt': {
+        if (!canManageBooking(session, booking.business.ownerId)) {
+          return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+        }
+        await ensureReceiptNumber(params.id);
+        const updated = await prisma.booking.findUnique({
+          where: { id: params.id },
+          include: { service: true, staff: true, business: true },
+        });
         return NextResponse.json({ booking: updated });
       }
 

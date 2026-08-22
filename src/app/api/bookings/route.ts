@@ -81,25 +81,33 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const businessId = searchParams.get('businessId');
   const role = searchParams.get('role') || 'customer';
+  const scope = searchParams.get('scope');
 
   if (role === 'owner' && businessId) {
     const bookings = await prisma.booking.findMany({
       where: { businessId },
-      include: { service: true, staff: true, customer: true },
+      include: { service: true, staff: true, customer: true, business: true },
       orderBy: [{ date: 'asc' }, { startTime: 'asc' }],
     });
     return NextResponse.json({ bookings });
   }
 
+  const customerMatch = {
+    OR: [{ customerId: session.id }, { customerPhone: session.phone }],
+  };
   const bookings = await prisma.booking.findMany({
-    where: {
-      OR: [
-        { customerId: session.id },
-        { customerPhone: session.phone },
-      ],
-      status: { notIn: ['CANCELLED', 'REJECTED'] },
-      date: { gte: new Date(new Date().setHours(0, 0, 0, 0)) },
-    },
+    where:
+      scope === 'all'
+        ? {
+            AND: [customerMatch, { status: { notIn: ['CANCELLED', 'REJECTED'] } }],
+          }
+        : {
+            AND: [
+              customerMatch,
+              { status: { notIn: ['CANCELLED', 'REJECTED'] } },
+              { date: { gte: new Date(new Date().setHours(0, 0, 0, 0)) } },
+            ],
+          },
     include: { service: true, staff: true, business: true },
     orderBy: [{ date: 'asc' }, { startTime: 'asc' }],
   });
