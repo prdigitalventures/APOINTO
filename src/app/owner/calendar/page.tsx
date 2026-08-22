@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, Suspense } from 'react';
+import { useEffect, useMemo, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/components/AuthProvider';
@@ -10,8 +10,30 @@ import { StatusChip } from '@/components/ui/StatusChip';
 import { TimeRequestButtons } from '@/components/TimeRequestButtons';
 import { ShareLink } from '@/components/ShareLink';
 import { formatTime12h, formatCurrency, DAYS } from '@/lib/utils';
-import { format, isToday } from 'date-fns';
-import { ArrowLeft, Plus, Clock } from 'lucide-react';
+import {
+  addMonths,
+  addYears,
+  eachDayOfInterval,
+  endOfMonth,
+  endOfWeek,
+  format,
+  isAfter,
+  isBefore,
+  isSameDay,
+  isSameMonth,
+  isToday,
+  startOfMonth,
+  startOfWeek,
+} from 'date-fns';
+import { ArrowLeft, ChevronLeft, ChevronRight, Plus, Clock } from 'lucide-react';
+
+const WEEK_STARTS_ON = 1 as const; // Monday — ISO / India
+const WEEKDAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const MONTH_LABELS = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
+const HORIZON_YEARS = 5;
 
 interface Booking {
   id: string;
@@ -36,9 +58,21 @@ function CalendarContent() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [business, setBusiness] = useState<{ id: string; name: string; slug: string } | null>(null);
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [viewMonth, setViewMonth] = useState(() => startOfMonth(new Date()));
   const [showWalkIn, setShowWalkIn] = useState(false);
   const [showShare, setShowShare] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+  const today = useMemo(() => new Date(), []);
+  const minJumpMonth = startOfMonth(today);
+  const maxJumpMonth = startOfMonth(addYears(today, HORIZON_YEARS));
+  const jumpYears = useMemo(() => {
+    const years: number[] = [];
+    for (let y = minJumpMonth.getFullYear(); y <= maxJumpMonth.getFullYear(); y += 1) {
+      years.push(y);
+    }
+    return years;
+  }, [minJumpMonth, maxJumpMonth]);
 
   useEffect(() => {
     if (!loading && !user) router.push('/login');
@@ -85,6 +119,40 @@ function CalendarContent() {
       ['PENDING', 'TIME_UPDATE_REQUESTED', 'CUSTOMER_TIME_REQUESTED'].includes(b.status)
     );
 
+  const monthDays = useMemo(() => {
+    const monthStart = startOfMonth(viewMonth);
+    const monthEnd = endOfMonth(viewMonth);
+    return eachDayOfInterval({
+      start: startOfWeek(monthStart, { weekStartsOn: WEEK_STARTS_ON }),
+      end: endOfWeek(monthEnd, { weekStartsOn: WEEK_STARTS_ON }),
+    });
+  }, [viewMonth]);
+
+  const selectedWeekDays = useMemo(() => {
+    const weekStart = startOfWeek(selectedDate, { weekStartsOn: WEEK_STARTS_ON });
+    return eachDayOfInterval({
+      start: weekStart,
+      end: endOfWeek(weekStart, { weekStartsOn: WEEK_STARTS_ON }),
+    });
+  }, [selectedDate]);
+
+  const canPrevMonth = true;
+  const canNextMonth = !isAfter(startOfMonth(addMonths(viewMonth, 1)), maxJumpMonth);
+
+  const goToMonth = (next: Date) => {
+    let month = startOfMonth(next);
+    if (isAfter(month, maxJumpMonth)) month = maxJumpMonth;
+    setViewMonth(month);
+    if (!isSameMonth(selectedDate, month)) {
+      const pick = isSameMonth(today, month) ? today : month;
+      setSelectedDate(pick);
+    }
+  };
+
+  const jumpYear = viewMonth.getFullYear();
+  const jumpMonth = viewMonth.getMonth();
+  const yearInJumpRange = jumpYears.includes(jumpYear);
+
   const handleAction = async (bookingId: string, action: string, extra?: Record<string, unknown>) => {
     setActionLoading(bookingId);
     try {
@@ -110,7 +178,7 @@ function CalendarContent() {
         <div className="flex-1">
           <h1 className="font-semibold">{business?.name || 'Calendar'}</h1>
           <p className="text-xs text-gray-500">
-            {isToday(selectedDate) ? 'Today' : format(selectedDate, 'EEE, MMM d')}
+            {isToday(selectedDate) ? 'Today' : format(selectedDate, 'EEE, MMM d, yyyy')}
             {dayBookings.length
               ? ` · ${dayBookings.length} booking${dayBookings.length === 1 ? '' : 's'}`
               : ''}
@@ -125,51 +193,199 @@ function CalendarContent() {
         </div>
       )}
 
-      <div className="px-4 py-3 flex gap-2 overflow-x-auto">
-        {[-1, 0, 1, 2, 3, 4, 5, 6].map((offset) => {
-          const d = new Date();
-          d.setDate(d.getDate() + offset);
-          const key = dayKey(d);
-          const isSelected = key === dayKey(selectedDate);
-          const onDay = activeOnDay(key);
-          const alert = hasNewAlert(onDay);
-          return (
+      <div className="px-4 py-3">
+        <div className="rounded-2xl border bg-white p-3 dark:bg-[#16181d] dark:border-gray-700">
+          <div className="mb-3 flex items-center gap-2">
             <button
-              key={offset}
               type="button"
-              onClick={() => setSelectedDate(d)}
-              aria-label={`${DAYS[d.getDay()]} ${d.getDate()}${
-                onDay.length ? `, ${onDay.length} booking${onDay.length === 1 ? '' : 's'}` : ', no bookings'
-              }${alert ? ', new booking alert' : ''}`}
-              className={`relative flex-shrink-0 w-14 py-2 rounded-xl text-center ${
-                isSelected ? 'bg-indigo-600 text-white' : 'bg-white border dark:bg-[#16181d] dark:border-gray-700'
-              }`}
+              aria-label="Previous month"
+              disabled={!canPrevMonth}
+              onClick={() => goToMonth(addMonths(viewMonth, -1))}
+              className="rounded-lg p-2 text-gray-700 hover:bg-gray-100 disabled:opacity-40 dark:text-gray-200 dark:hover:bg-gray-800"
             >
-              {alert ? (
-                <span
-                  className="apointo-alert-dot absolute right-1.5 top-1 h-2.5 w-2.5 rounded-full bg-amber-400 ring-2 ring-white"
-                  title="New booking alert"
-                />
-              ) : null}
-              <div className="text-xs">{DAYS[d.getDay()].slice(0, 3)}</div>
-              <div className="text-lg font-semibold leading-tight">{d.getDate()}</div>
-              <div className="mt-0.5 flex h-3 items-center justify-center gap-0.5">
-                {onDay.length > 0 ? (
-                  <>
-                    <span
-                      className={`h-1.5 w-1.5 rounded-full ${isSelected ? 'bg-white' : 'bg-indigo-500'}`}
-                    />
-                    <span className={`text-[10px] font-medium ${isSelected ? 'text-indigo-100' : 'text-indigo-600'}`}>
-                      {onDay.length}
-                    </span>
-                  </>
-                ) : (
-                  <span className="h-1.5" />
-                )}
-              </div>
+              <ChevronLeft size={20} />
             </button>
-          );
-        })}
+            <div className="min-w-0 flex-1 text-center">
+              <div className="font-semibold">{format(viewMonth, 'MMMM yyyy')}</div>
+              <p className="text-[11px] text-gray-500">Jump any month through {format(maxJumpMonth, 'MMM yyyy')}</p>
+            </div>
+            <button
+              type="button"
+              aria-label="Next month"
+              disabled={!canNextMonth}
+              onClick={() => goToMonth(addMonths(viewMonth, 1))}
+              className="rounded-lg p-2 text-gray-700 hover:bg-gray-100 disabled:opacity-40 dark:text-gray-200 dark:hover:bg-gray-800"
+            >
+              <ChevronRight size={20} />
+            </button>
+          </div>
+
+          <div className="mb-3 flex flex-wrap items-center gap-2">
+            <label className="sr-only" htmlFor="calendar-month-jump">Month</label>
+            <select
+              id="calendar-month-jump"
+              aria-label="Jump to month"
+              className="flex-1 min-w-[8rem] rounded-xl border px-3 py-2 text-sm dark:bg-[#0b0d12] dark:border-gray-700"
+              value={jumpMonth}
+              onChange={(e) => {
+                const monthIndex = Number(e.target.value);
+                goToMonth(new Date(jumpYear, monthIndex, 1));
+              }}
+            >
+              {MONTH_LABELS.map((label, index) => {
+                const candidate = startOfMonth(new Date(jumpYear, index, 1));
+                const disabled = isAfter(candidate, maxJumpMonth);
+                return (
+                  <option key={label} value={index} disabled={disabled}>
+                    {label}
+                  </option>
+                );
+              })}
+            </select>
+            <label className="sr-only" htmlFor="calendar-year-jump">Year</label>
+            <select
+              id="calendar-year-jump"
+              aria-label="Jump to year"
+              className="w-28 rounded-xl border px-3 py-2 text-sm dark:bg-[#0b0d12] dark:border-gray-700"
+              value={yearInJumpRange ? String(jumpYear) : ''}
+              onChange={(e) => {
+                const year = Number(e.target.value);
+                let candidate = startOfMonth(new Date(year, jumpMonth, 1));
+                if (isAfter(candidate, maxJumpMonth)) candidate = maxJumpMonth;
+                if (isBefore(candidate, minJumpMonth) && year === minJumpMonth.getFullYear()) {
+                  candidate = minJumpMonth;
+                }
+                goToMonth(candidate);
+              }}
+            >
+              {!yearInJumpRange ? (
+                <option value="" disabled>
+                  {jumpYear}
+                </option>
+              ) : null}
+              {jumpYears.map((year) => (
+                <option key={year} value={year}>
+                  {year}
+                </option>
+              ))}
+            </select>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                setViewMonth(startOfMonth(today));
+                setSelectedDate(today);
+              }}
+            >
+              Today
+            </Button>
+          </div>
+
+          <div className="mb-1 grid grid-cols-7 text-center text-[11px] font-medium text-gray-500">
+            {WEEKDAY_LABELS.map((label) => (
+              <div key={label} className="py-1">{label}</div>
+            ))}
+          </div>
+          <div className="grid grid-cols-7 gap-1">
+            {monthDays.map((d) => {
+              const key = dayKey(d);
+              const inMonth = isSameMonth(d, viewMonth);
+              const isSelected = isSameDay(d, selectedDate);
+              const onDay = activeOnDay(key);
+              const alert = hasNewAlert(onDay);
+              const beyondHorizon = isAfter(startOfMonth(d), maxJumpMonth);
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  disabled={beyondHorizon}
+                  onClick={() => {
+                    setSelectedDate(d);
+                    setViewMonth(startOfMonth(d));
+                  }}
+                  aria-label={`${DAYS[d.getDay()]} ${format(d, 'MMM d, yyyy')}${
+                    onDay.length ? `, ${onDay.length} booking${onDay.length === 1 ? '' : 's'}` : ', no bookings'
+                  }${alert ? ', new booking alert' : ''}`}
+                  className={`relative aspect-square rounded-xl text-center text-sm leading-none disabled:opacity-30 ${
+                    isSelected
+                      ? 'bg-indigo-600 text-white'
+                      : inMonth
+                        ? 'bg-gray-50 hover:bg-gray-100 dark:bg-[#0b0d12] dark:hover:bg-gray-800'
+                        : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
+                  } ${isToday(d) && !isSelected ? 'ring-1 ring-indigo-400' : ''}`}
+                >
+                  {alert ? (
+                    <span
+                      className="apointo-alert-dot absolute right-1 top-1 h-2 w-2 rounded-full bg-amber-400 ring-2 ring-white"
+                      title="New booking alert"
+                    />
+                  ) : null}
+                  <span className={`block pt-1.5 font-semibold ${!inMonth && !isSelected ? 'font-normal' : ''}`}>
+                    {d.getDate()}
+                  </span>
+                  <span className="mt-0.5 flex h-3 items-center justify-center gap-0.5">
+                    {onDay.length > 0 ? (
+                      <>
+                        <span className={`h-1.5 w-1.5 rounded-full ${isSelected ? 'bg-white' : 'bg-indigo-500'}`} />
+                        <span className={`text-[9px] font-medium ${isSelected ? 'text-indigo-100' : 'text-indigo-600'}`}>
+                          {onDay.length}
+                        </span>
+                      </>
+                    ) : (
+                      <span className="h-1.5" />
+                    )}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="mt-3 flex gap-2 overflow-x-auto">
+          {selectedWeekDays.map((d) => {
+            const key = dayKey(d);
+            const isSelected = isSameDay(d, selectedDate);
+            const onDay = activeOnDay(key);
+            const alert = hasNewAlert(onDay);
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => {
+                  setSelectedDate(d);
+                  setViewMonth(startOfMonth(d));
+                }}
+                aria-label={`${DAYS[d.getDay()]} ${d.getDate()}${
+                  onDay.length ? `, ${onDay.length} booking${onDay.length === 1 ? '' : 's'}` : ', no bookings'
+                }${alert ? ', new booking alert' : ''}`}
+                className={`relative flex-shrink-0 w-14 py-2 rounded-xl text-center ${
+                  isSelected ? 'bg-indigo-600 text-white' : 'bg-white border dark:bg-[#16181d] dark:border-gray-700'
+                }`}
+              >
+                {alert ? (
+                  <span
+                    className="apointo-alert-dot absolute right-1.5 top-1 h-2.5 w-2.5 rounded-full bg-amber-400 ring-2 ring-white"
+                    title="New booking alert"
+                  />
+                ) : null}
+                <div className="text-xs">{DAYS[d.getDay()].slice(0, 3)}</div>
+                <div className="text-lg font-semibold leading-tight">{d.getDate()}</div>
+                <div className="mt-0.5 flex h-3 items-center justify-center gap-0.5">
+                  {onDay.length > 0 ? (
+                    <>
+                      <span className={`h-1.5 w-1.5 rounded-full ${isSelected ? 'bg-white' : 'bg-indigo-500'}`} />
+                      <span className={`text-[10px] font-medium ${isSelected ? 'text-indigo-100' : 'text-indigo-600'}`}>
+                        {onDay.length}
+                      </span>
+                    </>
+                  ) : (
+                    <span className="h-1.5" />
+                  )}
+                </div>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       <div className="px-4 flex gap-2 mb-4">
