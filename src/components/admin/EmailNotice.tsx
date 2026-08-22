@@ -50,10 +50,7 @@ export function EmailNoticeProvider({ children }: { children: React.ReactNode })
 export function useEmailNotice() {
   const ctx = useContext(Ctx);
   if (!ctx) {
-    return {
-      notice: null,
-      showEmailResult: (_kind: 'success' | 'error', _text: string) => {},
-    };
+    throw new Error('useEmailNotice must be used inside the admin shell');
   }
   return ctx;
 }
