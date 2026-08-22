@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
 import { reportEmailResponse, useEmailNotice } from '@/components/admin/EmailNotice';
+import { AreaLineChart, DonutChart, GroupedBarChart, Sparkline } from '@/components/admin/DashboardCharts';
 
 type Range = '1d' | '2d' | '7d' | '30d';
 
@@ -46,49 +47,50 @@ const RANGES: Array<{ id: Range; label: string }> = [
   { id: '30d', label: 'Monthly' },
 ];
 
-function BarChart({
-  series,
-  keys,
+const CARD =
+  'rounded-2xl border border-gray-100 bg-white shadow-[0_8px_30px_rgba(15,23,42,0.06)] dark:border-gray-800 dark:bg-[#16181d] dark:shadow-none';
+
+function KpiCard({
+  href,
+  label,
+  value,
+  hint,
+  values,
+  tone,
 }: {
-  series: SeriesPoint[];
-  keys: Array<{ key: keyof SeriesPoint; color: string; label: string }>;
+  href: string;
+  label: string;
+  value: number;
+  hint: string;
+  values: number[];
+  tone: 'gradient-emerald' | 'gradient-amber' | 'violet' | 'sky' | 'indigo';
 }) {
-  const numeric = series.flatMap((p) => keys.map((k) => Number(p[k.key]) || 0));
-  const max = Math.max(1, ...numeric);
+  const spark =
+    tone === 'gradient-emerald' || tone === 'gradient-amber' ? '#ffffff' : undefined;
+  const sparkColor =
+    spark || (tone === 'violet' ? '#8b5cf6' : tone === 'sky' ? '#0ea5e9' : '#6366f1');
+
+  const wrap =
+    tone === 'gradient-emerald'
+      ? 'bg-gradient-to-br from-emerald-500 via-teal-500 to-emerald-700 text-white border-0 shadow-[0_10px_28px_rgba(16,185,129,0.28)]'
+      : tone === 'gradient-amber'
+        ? 'bg-gradient-to-br from-amber-400 via-orange-500 to-rose-500 text-white border-0 shadow-[0_10px_28px_rgba(245,158,11,0.28)]'
+        : CARD;
+
+  const muted =
+    tone === 'gradient-emerald' || tone === 'gradient-amber'
+      ? 'text-white/80'
+      : 'text-gray-500 dark:text-gray-400';
+
   return (
-    <div className="rounded-2xl border bg-white p-5 dark:bg-[#16181d] dark:border-gray-800">
-      <div className="mb-4 flex flex-wrap gap-3 text-xs">
-        {keys.map((k) => (
-          <span key={k.label} className="inline-flex items-center gap-1.5 text-gray-600">
-            <span className="h-2 w-2 rounded-full" style={{ background: k.color }} />
-            {k.label}
-          </span>
-        ))}
+    <Link href={href} className={`${wrap} flex flex-col p-4 transition hover:-translate-y-0.5`}>
+      <div className="flex items-start justify-between gap-2">
+        <p className={`text-xs font-medium ${muted}`}>{label}</p>
+        <Sparkline values={values} color={sparkColor} className="h-7 w-16 shrink-0 opacity-90" />
       </div>
-      <div className="flex h-48 items-end gap-1 sm:gap-2">
-        {series.map((p) => (
-          <div key={p.date} className="flex flex-1 items-end justify-center gap-0.5">
-            {keys.map((k) => (
-              <div
-                key={k.label}
-                className="w-full max-w-[14px] rounded-t-md"
-                style={{
-                  height: `${Math.max(6, (Number(p[k.key]) / max) * 100)}%`,
-                  background: k.color,
-                  opacity: 0.9,
-                }}
-                title={`${p.label} ${k.label}: ${p[k.key]}`}
-              />
-            ))}
-          </div>
-        ))}
-      </div>
-      <div className="mt-2 flex gap-1 sm:gap-2 text-[10px] text-gray-500">
-        {series.map((p) => (
-          <span key={p.date} className="flex-1 truncate text-center">{p.label}</span>
-        ))}
-      </div>
-    </div>
+      <p className="mt-3 text-3xl font-bold tabular-nums tracking-tight">{value}</p>
+      <p className={`mt-1 text-xs ${muted}`}>{hint}</p>
+    </Link>
   );
 }
 
@@ -110,43 +112,34 @@ export default function AdminHomePage() {
   }, [range]);
 
   if (error) return <p className="text-red-600">{error}</p>;
-  if (!stats) return <p>Loading analytics...</p>;
 
-  const kpis = [
-    { label: 'Live shops', value: stats.totals.liveBusinesses, href: '/admin/businesses?status=active', tone: 'emerald' },
-    { label: 'Shops created', value: stats.period.businessesCreated, href: '/admin/businesses', tone: 'indigo' },
-    { label: 'Live shops created', value: stats.period.liveCreated, href: '/admin/businesses?status=active', tone: 'teal' },
-    { label: 'Owners joined', value: stats.period.ownersJoined, href: '/admin/accounts?role=OWNER', tone: 'violet' },
-    { label: 'Customers joined', value: stats.period.customersJoined, href: '/admin/accounts?role=CUSTOMER', tone: 'sky' },
-    { label: 'Bookings', value: stats.period.bookingsInRange, href: '/admin', tone: 'amber' },
-  ];
-
-  const tones: Record<string, string> = {
-    emerald: 'from-emerald-500 to-emerald-600',
-    indigo: 'from-indigo-500 to-indigo-600',
-    teal: 'from-teal-500 to-teal-600',
-    violet: 'from-violet-500 to-violet-600',
-    sky: 'from-sky-500 to-sky-600',
-    amber: 'from-amber-500 to-amber-600',
-  };
+  const labels = stats?.series.map((p) => p.label) ?? [];
+  const ownersSeries = stats?.series.map((p) => p.owners) ?? [];
+  const customersSeries = stats?.series.map((p) => p.customers) ?? [];
+  const bookingsSeries = stats?.series.map((p) => p.bookings) ?? [];
+  const shopsSeries = stats?.series.map((p) => p.businesses) ?? [];
+  const liveSpark = stats?.series.map((p) => p.live) ?? [];
 
   return (
-    <div>
-      <div className="flex flex-wrap items-end justify-between gap-3">
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold">Analytics</h1>
+          <p className="text-xs font-semibold uppercase tracking-wider text-indigo-600">Overview</p>
+          <h1 className="text-2xl font-bold tracking-tight">Home</h1>
           <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-            Live shops, new owners, customers, and bookings for the selected window.
+            Live shops, signups, and bookings for the selected window.
           </p>
         </div>
-        <div className="flex rounded-2xl bg-gray-100 p-1 dark:bg-gray-800">
+        <div className="inline-flex rounded-full border border-gray-200 bg-white p-0.5 text-xs shadow-sm dark:border-gray-700 dark:bg-[#16181d]">
           {RANGES.map((r) => (
             <button
               key={r.id}
               type="button"
               onClick={() => setRange(r.id)}
-              className={`rounded-xl px-3 py-1.5 text-sm font-medium ${
-                range === r.id ? 'bg-white text-indigo-700 shadow-sm dark:bg-[#16181d]' : 'text-gray-600'
+              className={`rounded-full px-3 py-1.5 font-medium transition ${
+                range === r.id
+                  ? 'bg-indigo-600 text-white shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900 dark:text-gray-300'
               }`}
             >
               {r.label}
@@ -155,71 +148,148 @@ export default function AdminHomePage() {
         </div>
       </div>
 
-      {!stats.email?.configured && (
-        <p className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/40 dark:text-amber-100">
-          Email is not linked on Railway yet. Add <code className="font-mono">RESEND_API_KEY</code> and{' '}
-          <code className="font-mono">EMAIL_FROM=Apointo &lt;noreply@apointo.online&gt;</code> on the apointo service, then press Send test email.
-        </p>
-      )}
-      <div className="mt-4">
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={async () => {
-            const res = await fetch('/api/admin/email-test', { method: 'POST' });
-            const data = await res.json();
-            await reportEmailResponse(res, data, showEmailResult, 'Email sent successfully');
-          }}
-        >
-          Send test email to my inbox
-        </Button>
-      </div>
-
-      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {kpis.map((c) => (
-          <Link
-            key={c.label}
-            href={c.href}
-            className={`rounded-2xl bg-gradient-to-br ${tones[c.tone]} p-5 text-white shadow-sm`}
+      {stats ? (
+        <div className={`${CARD} flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between`}>
+          <div className="text-sm">
+            {stats.email?.configured ? (
+              <p className="text-gray-600 dark:text-gray-300">
+                Email is linked{stats.email.from ? ` · ${stats.email.from}` : ''}.
+              </p>
+            ) : (
+              <p className="text-amber-800 dark:text-amber-200">
+                Email is not linked. Add <code className="font-mono text-xs">RESEND_API_KEY</code> and{' '}
+                <code className="font-mono text-xs">EMAIL_FROM=Apointo &lt;noreply@apointo.online&gt;</code> on Railway.
+              </p>
+            )}
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={async () => {
+              const res = await fetch('/api/admin/email-test', { method: 'POST' });
+              const data = await res.json();
+              await reportEmailResponse(res, data, showEmailResult, 'Email sent successfully');
+            }}
           >
-            <p className="text-sm text-white/80">{c.label}</p>
-            <p className="mt-2 text-3xl font-bold">{c.value}</p>
-          </Link>
-        ))}
-      </div>
+            Send test email
+          </Button>
+        </div>
+      ) : null}
 
-      <div className="mt-6 grid gap-4 lg:grid-cols-2">
-        <BarChart
-          series={stats.series}
-          keys={[
-            { key: 'owners', color: '#8b5cf6', label: 'Owners joined' },
-            { key: 'customers', color: '#0ea5e9', label: 'Customers joined' },
-          ]}
-        />
-        <BarChart
-          series={stats.series}
-          keys={[
-            { key: 'live', color: '#10b981', label: 'Live shops created' },
-            { key: 'businesses', color: '#6366f1', label: 'Shops created' },
-            { key: 'bookings', color: '#f59e0b', label: 'Bookings' },
-          ]}
-        />
-      </div>
+      {!stats ? (
+        <p className="text-sm text-gray-500">Loading analytics...</p>
+      ) : (
+        <>
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+            <KpiCard
+              href="/admin/businesses?status=active"
+              label="Live shops"
+              value={stats.totals.liveBusinesses}
+              hint={`${stats.totals.businesses} shops total`}
+              values={liveSpark}
+              tone="gradient-emerald"
+            />
+            <KpiCard
+              href="/admin/accounts?role=OWNER"
+              label="Owners joined"
+              value={stats.period.ownersJoined}
+              hint="New owners in window"
+              values={ownersSeries}
+              tone="violet"
+            />
+            <KpiCard
+              href="/admin/accounts?role=CUSTOMER"
+              label="Customers joined"
+              value={stats.period.customersJoined}
+              hint="New customers in window"
+              values={customersSeries}
+              tone="sky"
+            />
+            <KpiCard
+              href="/admin"
+              label="Bookings"
+              value={stats.period.bookingsInRange}
+              hint="Created in window"
+              values={bookingsSeries}
+              tone="gradient-amber"
+            />
+            <KpiCard
+              href="/admin/businesses"
+              label="Shops created"
+              value={stats.period.businessesCreated}
+              hint={`${stats.period.liveCreated} went live`}
+              values={shopsSeries}
+              tone="indigo"
+            />
+          </div>
 
-      <div className="mt-6 grid gap-3 sm:grid-cols-3 text-sm">
-        <div className="rounded-2xl border bg-white p-4 dark:bg-[#16181d] dark:border-gray-800">
-          <p className="text-gray-500">All owners</p>
-          <p className="text-xl font-semibold">{stats.totals.owners}</p>
-        </div>
-        <div className="rounded-2xl border bg-white p-4 dark:bg-[#16181d] dark:border-gray-800">
-          <p className="text-gray-500">All customers</p>
-          <p className="text-xl font-semibold">{stats.totals.customers}</p>
-        </div>
-        <div className="rounded-2xl border bg-white p-4 dark:bg-[#16181d] dark:border-gray-800">
-          <p className="text-gray-500">Not live shops</p>
-          <p className="text-xl font-semibold text-red-600">{stats.totals.disabledBusinesses}</p>
-        </div>
-      </div>
+          <div className="grid gap-4 lg:grid-cols-3">
+            <section className={`${CARD} p-5 lg:col-span-2`}>
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <h2 className="font-semibold">Signups</h2>
+                  <p className="text-xs text-gray-500">Owners vs customers joined</p>
+                </div>
+                <div className="flex gap-3 text-xs text-gray-600 dark:text-gray-300">
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="h-2 w-2 rounded-full bg-violet-500" /> Owners
+                  </span>
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="h-2 w-2 rounded-full bg-sky-500" /> Customers
+                  </span>
+                </div>
+              </div>
+              <GroupedBarChart
+                labels={labels}
+                series={[
+                  { label: 'Owners', color: '#8b5cf6', values: ownersSeries },
+                  { label: 'Customers', color: '#0ea5e9', values: customersSeries },
+                ]}
+              />
+            </section>
+
+            <section className={`${CARD} p-5`}>
+              <h2 className="font-semibold">Shop status</h2>
+              <p className="mb-3 text-xs text-gray-500">Live vs not live</p>
+              <DonutChart
+                centerLabel="live"
+                centerValue={stats.totals.liveBusinesses}
+                segments={[
+                  { label: 'Live', value: stats.totals.liveBusinesses, color: '#10b981' },
+                  { label: 'Not live', value: stats.totals.disabledBusinesses, color: '#f43f5e' },
+                ]}
+              />
+              <p className="mt-3 text-center text-xs text-gray-500">
+                {stats.totals.owners} owners · {stats.totals.customers} customers
+              </p>
+            </section>
+          </div>
+
+          <section className={`${CARD} p-5`}>
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <h2 className="font-semibold">Activity</h2>
+                <p className="text-xs text-gray-500">Bookings and shops created over the window</p>
+              </div>
+              <div className="flex gap-3 text-xs text-gray-600 dark:text-gray-300">
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="h-2 w-2 rounded-full bg-amber-500" /> Bookings
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="h-2 w-2 rounded-full bg-indigo-500" /> Shops created
+                </span>
+              </div>
+            </div>
+            <AreaLineChart
+              labels={labels}
+              series={[
+                { label: 'Bookings', color: '#f59e0b', values: bookingsSeries },
+                { label: 'Shops', color: '#6366f1', values: shopsSeries },
+              ]}
+            />
+          </section>
+        </>
+      )}
     </div>
   );
 }
