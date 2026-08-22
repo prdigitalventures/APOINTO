@@ -25,6 +25,10 @@ export default function AdminHelpPage() {
       body: 'Send credentials emails a temporary password. Reset link emails /reset-password instead. Copy the password from the yellow banner if email is not configured.',
     },
     {
+      title: 'Outbound email',
+      body: 'Real delivery needs a verified Resend domain (apointo.online) plus Railway RESEND_API_KEY and EMAIL_FROM=Apointo <noreply@apointo.online>. Until those are set, credentials, shop-ready, campaigns, and password-reset mail stay in Railway logs.',
+    },
+    {
       title: 'Campaigns',
       body: 'Save a draft, pick Owners / Customers / All, then Send email. For WhatsApp, export the CSV until Meta Cloud API is connected.',
     },

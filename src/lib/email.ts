@@ -20,6 +20,24 @@ export function isEmailConfigured() {
   return Boolean(process.env.RESEND_API_KEY || (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS));
 }
 
+export function emailFromAddress() {
+  return fromAddress();
+}
+
+function resendUserMessage(status: number, body: string) {
+  const lower = body.toLowerCase();
+  if (/not verified|unverified domain|domain is not verified/.test(lower)) {
+    return 'Resend rejected the from-address because the sending domain is not verified. Add apointo.online in the Resend dashboard, then set EMAIL_FROM to a mailbox on that domain.';
+  }
+  if (status === 401 || /unauthorized|invalid.?api.?key/.test(lower)) {
+    return 'Resend rejected the API key. Check RESEND_API_KEY on Railway.';
+  }
+  if (status === 422 || status === 403) {
+    return 'Resend could not send this email. Confirm the domain is verified and EMAIL_FROM matches it.';
+  }
+  return 'Could not send email right now. Please try again.';
+}
+
 export async function sendEmail(message: EmailMessage): Promise<SendEmailResult> {
   if (process.env.RESEND_API_KEY) {
     const res = await fetch('https://api.resend.com/emails', {
@@ -39,7 +57,7 @@ export async function sendEmail(message: EmailMessage): Promise<SendEmailResult>
     if (!res.ok) {
       const body = await res.text();
       console.error('[Email] Resend failed:', res.status, body);
-      throw new Error('Could not send email right now. Please try again.');
+      throw new Error(resendUserMessage(res.status, body));
     }
     return { sent: true, provider: 'resend' };
   }
