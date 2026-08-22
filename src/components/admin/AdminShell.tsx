@@ -18,6 +18,7 @@ import {
 import { useAuth } from '@/components/AuthProvider';
 import { can, FEATURE_LABELS, type AdminFeature, type PermissionMap } from '@/lib/admin-permissions';
 import { cn } from '@/lib/utils';
+import { EmailNoticeProvider } from '@/components/admin/EmailNotice';
 
 const NAV: Array<{ href: string; feature: AdminFeature; icon: typeof LayoutDashboard }> = [
   { href: '/admin', feature: 'dashboard', icon: LayoutDashboard },
@@ -109,6 +110,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   );
 
   return (
+    <EmailNoticeProvider>
     <div className="min-h-screen bg-gray-50 dark:bg-[#0b0d12]">
       <aside className="hidden lg:flex fixed inset-y-0 left-0 w-64 flex-col border-r bg-white p-4 dark:bg-[#16181d] dark:border-gray-800">
         <div className="mb-6 px-2">
@@ -146,8 +148,9 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             </div>
           </div>
         ) : null}
-        <main className="mx-auto max-w-6xl p-4 pb-16 lg:p-8">{children}</main>
+        <main className="mx-auto max-w-6xl p-4 pb-24 lg:p-8">{children}</main>
       </div>
     </div>
+    </EmailNoticeProvider>
   );
 }

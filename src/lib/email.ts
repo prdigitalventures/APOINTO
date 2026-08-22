@@ -90,6 +90,14 @@ export async function sendEmail(message: EmailMessage): Promise<SendEmailResult>
   return { sent: false, provider: 'log' };
 }
 
+export function assertEmailDelivered(result: SendEmailResult) {
+  if (result.sent) return result;
+  throw Object.assign(
+    new Error('Error: Unable to send. Link Resend on Railway with RESEND_API_KEY and a verified EMAIL_FROM.'),
+    { status: 502 }
+  );
+}
+
 export async function sendVerificationEmail(to: string, token: string) {
   const url = `${appBaseUrl()}/verify-email?token=${encodeURIComponent(token)}`;
   const result = await sendEmail({

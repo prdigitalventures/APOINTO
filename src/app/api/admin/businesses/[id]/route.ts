@@ -3,7 +3,7 @@ import { prisma } from '@/lib/db';
 import { adminError, requirePermission, writeAudit } from '@/lib/admin';
 import { setBusinessActive } from '@/lib/admin-business';
 import { normalizeEmail } from '@/lib/identity';
-import { sendShopAssignedEmail } from '@/lib/email';
+import { sendShopAssignedEmail, assertEmailDelivered } from '@/lib/email';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,6 +28,7 @@ export async function PATCH(
         businessName: business.name,
         slug: business.slug,
       });
+      assertEmailDelivered(mail);
       await writeAudit({
         actorId: staff.session.id,
         action: 'business.notify',

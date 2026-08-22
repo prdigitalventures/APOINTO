@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { reportEmailResponse, useEmailNotice } from '@/components/admin/EmailNotice';
 
 function LivePill({ live }: { live: boolean }) {
   return (
@@ -19,6 +20,7 @@ function LivePill({ live }: { live: boolean }) {
 
 function BusinessesInner() {
   const searchParams = useSearchParams();
+  const { showEmailResult } = useEmailNotice();
   const [q, setQ] = useState('');
   const [status, setStatus] = useState(searchParams.get('status') || '');
   const [rows, setRows] = useState<Array<{
@@ -109,7 +111,7 @@ function BusinessesInner() {
       body: JSON.stringify({ action: 'notify' }),
     });
     const data = await res.json();
-    setMsg(res.ok ? (data.emailSent ? 'Shop-ready email sent' : 'Email not configured') : data.error);
+    await reportEmailResponse(res, data, showEmailResult, 'Email sent successfully');
   };
 
   return (

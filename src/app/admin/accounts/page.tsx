@@ -6,6 +6,7 @@ import { useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { reportEmailResponse, useEmailNotice } from '@/components/admin/EmailNotice';
 
 function LivePill({ live }: { live: boolean }) {
   return (
@@ -24,6 +25,7 @@ function AccountsInner() {
   const [q, setQ] = useState('');
   const [role, setRole] = useState(searchParams.get('role') || '');
   const [status, setStatus] = useState(searchParams.get('status') || '');
+  const { showEmailResult } = useEmailNotice();
   const [users, setUsers] = useState<Array<{
     id: string;
     name: string;
@@ -106,18 +108,16 @@ function AccountsInner() {
   const sendCreds = async (id: string) => {
     const res = await fetch(`/api/admin/accounts/${id}/credentials`, { method: 'POST' });
     const data = await res.json();
-    if (!res.ok) {
-      setMsg(data.error);
-      return;
-    }
-    setCreatedSecret(data.password);
-    setMsg(data.emailSent ? 'Confirmation email sent with login and temporary password.' : 'Password reset. Email is not configured — copy the password below.');
+    const ok = await reportEmailResponse(res, data, showEmailResult, 'Email sent successfully');
+    if (ok && data.password) setCreatedSecret(data.password);
+    if (!ok) setMsg(data.error || 'Error: Unable to send');
   };
 
   const reset = async (id: string) => {
     const res = await fetch(`/api/admin/accounts/${id}/reset`, { method: 'POST' });
     const data = await res.json();
-    setMsg(res.ok ? (data.emailSent ? 'Reset link emailed' : 'Reset link created (email not configured)') : data.error);
+    await reportEmailResponse(res, data, showEmailResult, 'Email sent successfully');
+    if (!res.ok) setMsg(data.error || 'Error: Unable to send');
   };
 
   return (

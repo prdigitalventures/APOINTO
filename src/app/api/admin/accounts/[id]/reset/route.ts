@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { adminError, requirePermission, writeAudit } from '@/lib/admin';
 import { issuePasswordResetForUser } from '@/lib/auth';
+import { assertEmailDelivered } from '@/lib/email';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,6 +16,7 @@ export async function POST(
     if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
 
     const result = await issuePasswordResetForUser(user);
+    assertEmailDelivered({ sent: Boolean(result.emailSent), provider: result.emailSent ? 'resend' : 'log' });
     await writeAudit({
       actorId: staff.session.id,
       action: 'account.reset',

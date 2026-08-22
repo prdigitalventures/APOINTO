@@ -3,7 +3,7 @@ import { prisma } from '@/lib/db';
 import { adminError, requirePermission, uniquePlaceholderPhone, writeAudit } from '@/lib/admin';
 import { hashPassword, issuePasswordResetForUser } from '@/lib/auth';
 import { normalizeEmail, normalizePhone, createSecretToken } from '@/lib/identity';
-import { sendStaffInviteEmail } from '@/lib/email';
+import { sendStaffInviteEmail, assertEmailDelivered } from '@/lib/email';
 import { appBaseUrl } from '@/lib/app-url';
 
 export const dynamic = 'force-dynamic';
@@ -71,7 +71,8 @@ export async function POST(req: NextRequest) {
     });
 
     const reset = await issuePasswordResetForUser(user);
-    await sendStaffInviteEmail(email, { name, resetUrl: reset.resetUrl });
+    const invite = await sendStaffInviteEmail(email, { name, resetUrl: reset.resetUrl });
+    assertEmailDelivered({ sent: Boolean(reset.emailSent && invite.sent), provider: invite.provider });
 
     await writeAudit({
       actorId: staff.session.id,

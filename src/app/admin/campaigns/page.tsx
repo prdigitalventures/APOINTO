@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { reportEmailResponse, useEmailNotice } from '@/components/admin/EmailNotice';
 
 type Campaign = {
   id: string;
@@ -15,6 +16,7 @@ type Campaign = {
 };
 
 export default function AdminCampaignsPage() {
+  const { showEmailResult } = useEmailNotice();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [msg, setMsg] = useState('');
   const [form, setForm] = useState({
@@ -58,8 +60,8 @@ export default function AdminCampaignsPage() {
       body: JSON.stringify({ action: 'send' }),
     });
     const data = await res.json();
-    setMsg(res.ok ? `Sent to ${data.sent} people` : data.error);
-    load();
+    await reportEmailResponse(res, data, showEmailResult, 'Email sent successfully');
+    if (res.ok) load();
   };
 
   const whatsapp = async (id: string) => {

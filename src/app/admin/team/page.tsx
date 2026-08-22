@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { ADMIN_FEATURES, FEATURE_LABELS, type AdminFeature, type PermissionLevel } from '@/lib/admin-permissions';
+import { reportEmailResponse, useEmailNotice } from '@/components/admin/EmailNotice';
 
 type Role = { id: string; name: string; permissions: Array<{ feature: string; level: string }> };
 type Member = {
@@ -18,6 +19,7 @@ type Member = {
 };
 
 export default function AdminTeamPage() {
+  const { showEmailResult } = useEmailNotice();
   const [roles, setRoles] = useState<Role[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
   const [audits, setAudits] = useState<Array<{ id: string; action: string; createdAt: string; actor: { name: string } }>>([]);
@@ -50,7 +52,7 @@ export default function AdminTeamPage() {
       body: JSON.stringify(form),
     });
     const data = await res.json();
-    setMsg(res.ok ? `Invited ${form.email}` : data.error);
+    await reportEmailResponse(res, data, showEmailResult, 'Email sent successfully');
     if (res.ok) load();
   };
 

@@ -3,7 +3,7 @@ import { prisma } from '@/lib/db';
 import { adminError, requirePermission, writeAudit } from '@/lib/admin';
 import { hashPassword } from '@/lib/auth';
 import { generateTempPassword } from '@/lib/admin-password';
-import { sendAccountCreatedEmail } from '@/lib/email';
+import { sendAccountCreatedEmail, assertEmailDelivered } from '@/lib/email';
 
 export const dynamic = 'force-dynamic';
 
@@ -29,6 +29,7 @@ export async function POST(
       password,
       role: user.role,
     });
+    assertEmailDelivered(mail);
 
     await writeAudit({
       actorId: staff.session.id,

@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { Button } from '@/components/ui/Button';
+import { reportEmailResponse, useEmailNotice } from '@/components/admin/EmailNotice';
 
 type Range = '1d' | '2d' | '7d' | '30d';
 
@@ -94,6 +96,7 @@ export default function AdminHomePage() {
   const [range, setRange] = useState<Range>('1d');
   const [stats, setStats] = useState<Stats | null>(null);
   const [error, setError] = useState('');
+  const { showEmailResult } = useEmailNotice();
 
   useEffect(() => {
     setStats(null);
@@ -154,10 +157,23 @@ export default function AdminHomePage() {
 
       {!stats.email?.configured && (
         <p className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/40 dark:text-amber-100">
-          Email is not linked. Add a Resend domain and set Railway <code className="font-mono">RESEND_API_KEY</code> plus{' '}
-          <code className="font-mono">EMAIL_FROM</code> so credentials, shop-ready, campaigns, and password resets actually send.
+          Email is not linked on Railway yet. Add <code className="font-mono">RESEND_API_KEY</code> and{' '}
+          <code className="font-mono">EMAIL_FROM=Apointo &lt;noreply@apointo.online&gt;</code> on the apointo service, then press Send test email.
         </p>
       )}
+      <div className="mt-4">
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={async () => {
+            const res = await fetch('/api/admin/email-test', { method: 'POST' });
+            const data = await res.json();
+            await reportEmailResponse(res, data, showEmailResult, 'Email sent successfully');
+          }}
+        >
+          Send test email to my inbox
+        </Button>
+      </div>
 
       <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {kpis.map((c) => (
