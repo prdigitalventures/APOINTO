@@ -3,6 +3,7 @@ import { prisma } from './db';
 export type NotificationType =
   | 'NEW_BOOKING_REQUEST'
   | 'BOOKING_ACCEPTED'
+  | 'BOOKING_COMPLETED'
   | 'BOOKING_REJECTED'
   | 'ALTERNATIVE_TIME_SUGGESTED'
   | 'TIME_UPDATE_REQUESTED'
@@ -50,7 +51,7 @@ export async function notifyNewBookingRequest(bookingId: string) {
   await sendNotification({
     userId: booking.business.ownerId,
     type: 'NEW_BOOKING_REQUEST',
-    title: '🔔 New booking request',
+    title: 'New booking request',
     message: `${booking.customerName} requested ${booking.service.name}${booking.staff ? ` with ${booking.staff.name}` : ''} at ${formatTime(booking.startTime)}`,
     data: { bookingId: booking.id },
   });
@@ -66,7 +67,7 @@ export async function notifyBookingAccepted(bookingId: string) {
   await sendNotification({
     userId: booking.customerId,
     type: 'BOOKING_ACCEPTED',
-    title: '✅ Appointment Confirmed',
+    title: 'Appointment confirmed',
     message: `${booking.business.name} - ${booking.service.name}${booking.staff ? ` with ${booking.staff.name}` : ''} at ${formatTime(booking.startTime)}`,
     data: { bookingId: booking.id },
   });
@@ -87,7 +88,7 @@ export async function notifyBookingRejected(bookingId: string, reason: string, a
   await sendNotification({
     userId: booking.customerId,
     type: 'BOOKING_REJECTED',
-    title: 'Booking Update',
+    title: 'Booking declined',
     message,
     data: { bookingId: booking.id, alternatives },
   });
@@ -107,7 +108,7 @@ export async function notifyTimeUpdateRequested(bookingId: string, minutes: numb
   await sendNotification({
     userId: recipientId,
     type: 'TIME_UPDATE_REQUESTED',
-    title: '⏱️ Time update requested',
+    title: 'Time update requested',
     message: `Additional ${minutes} minutes requested. Updated time: ${formatTime(newTime)}`,
     data: { bookingId: booking.id, additionalMinutes: minutes },
   });
@@ -124,7 +125,7 @@ export async function notifyBusinessRunningLate(bookingId: string, minutes: numb
   await sendNotification({
     userId: booking.customerId,
     type: 'BUSINESS_RUNNING_LATE',
-    title: '⏱️ Appointment Update',
+    title: 'Appointment delayed',
     message: `Your appointment is running approximately ${minutes} minutes late. Updated time: ${formatTime(newTime)}`,
     data: { bookingId: booking.id },
   });
@@ -143,6 +144,91 @@ export async function notifyAlternativeTimeSuggested(bookingId: string, suggeste
     title: 'Alternative time suggested',
     message: `${booking.business.name} suggested ${formatTime(suggestedTime)} instead.`,
     data: { bookingId: booking.id, suggestedTime },
+  });
+}
+
+export async function notifyBookingRescheduled(bookingId: string) {
+  const booking = await prisma.booking.findUnique({
+    where: { id: bookingId },
+    include: { business: true, service: true, staff: true, customer: true },
+  });
+  if (!booking || !booking.customerId) return;
+
+  await sendNotification({
+    userId: booking.customerId,
+    type: 'BOOKING_RESCHEDULED',
+    title: 'Appointment rescheduled',
+    message: `${booking.business.name} - ${booking.service.name}${booking.staff ? ` with ${booking.staff.name}` : ''} is now at ${formatTime(booking.startTime)}`,
+    data: { bookingId: booking.id },
+  });
+}
+
+export async function notifyBookingCompleted(bookingId: string) {
+  const booking = await prisma.booking.findUnique({
+    where: { id: bookingId },
+    include: { business: true, service: true, customer: true },
+  });
+  if (!booking) return;
+
+  const message = `${booking.business.name} - ${booking.service.name} is marked complete.`;
+  const recipients = [booking.business.ownerId, booking.customerId].filter(
+    (id, index, list): id is string => Boolean(id) && list.indexOf(id) === index
+  );
+
+  await Promise.all(
+    recipients.map((userId) =>
+      sendNotification({
+        userId,
+        type: 'BOOKING_COMPLETED',
+        title: 'Appointment completed',
+        message,
+        data: { bookingId: booking.id },
+      })
+    )
+  );
+}
+
+export async function notifyBookingCancelled(bookingId: string) {
+  const booking = await prisma.booking.findUnique({
+    where: { id: bookingId },
+    include: { business: true, service: true, customer: true },
+  });
+  if (!booking) return;
+
+  const message = `${booking.business.name} - ${booking.service.name} was cancelled.`;
+  const recipients = [booking.business.ownerId, booking.customerId].filter(
+    (id, index, list): id is string => Boolean(id) && list.indexOf(id) === index
+  );
+
+  await Promise.all(
+    recipients.map((userId) =>
+      sendNotification({
+        userId,
+        type: 'BOOKING_CANCELLED',
+        title: 'Appointment cancelled',
+        message,
+        data: { bookingId: booking.id },
+      })
+    )
+  );
+}
+
+export async function notifyTimeRequestAccepted(bookingId: string, minutes: number, requestedBy: string) {
+  const booking = await prisma.booking.findUnique({
+    where: { id: bookingId },
+    include: { business: true, customer: true },
+  });
+  if (!booking) return;
+
+  const recipientId = requestedBy === 'owner' ? booking.business.ownerId : booking.customerId;
+  if (!recipientId) return;
+
+  await sendNotification({
+    userId: recipientId,
+    type: 'TIME_REQUEST_ACCEPTED',
+    title: 'Time update accepted',
+    message: `The extra ${minutes} minutes were accepted. New time: ${formatTime(booking.startTime)}`,
+    data: { bookingId: booking.id },
   });
 }
 

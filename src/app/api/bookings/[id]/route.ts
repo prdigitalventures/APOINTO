@@ -7,6 +7,10 @@ import {
   notifyAlternativeTimeSuggested,
   notifyTimeUpdateRequested,
   notifyBusinessRunningLate,
+  notifyBookingRescheduled,
+  notifyBookingCompleted,
+  notifyBookingCancelled,
+  notifyTimeRequestAccepted,
   REJECTION_REASONS,
 } from '@/lib/notifications';
 import { getAlternativeSlots, calculateEndTime } from '@/lib/availability';
@@ -81,7 +85,7 @@ export async function PATCH(
             endTime,
           },
         });
-        await notifyBookingAccepted(params.id);
+        await notifyBookingRescheduled(params.id);
         return NextResponse.json({ booking: updated });
       }
 
@@ -117,6 +121,7 @@ export async function PATCH(
             where: { id: params.id },
             data: { status: 'CONFIRMED', startTime: newStart, endTime: newEnd },
           });
+          await notifyTimeRequestAccepted(params.id, timeReq.additionalMinutes, timeReq.requestedBy);
           return NextResponse.json({ booking: updated });
         }
         return NextResponse.json({ error: 'No pending time request' }, { status: 400 });
@@ -136,6 +141,7 @@ export async function PATCH(
           where: { id: params.id },
           data: { status: 'COMPLETED' },
         });
+        await notifyBookingCompleted(params.id);
         return NextResponse.json({ booking: updated });
       }
 
@@ -144,6 +150,7 @@ export async function PATCH(
           where: { id: params.id },
           data: { status: 'CANCELLED' },
         });
+        await notifyBookingCancelled(params.id);
         return NextResponse.json({ booking: updated });
       }
 
